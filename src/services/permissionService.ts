@@ -24,6 +24,15 @@ function getDefaultPermissions(worldId: string, personId: string): PersonPermiss
     receiveMessages: true,
     viewConversations: true,
     createGroupConversations: true,
+    goalCreate: true,
+    goalView: true,
+    goalEdit: true,
+    goalPause: true,
+    goalCancel: true,
+    planCreate: true,
+    planEdit: true,
+    planApprove: true,
+    taskDelegate: true,
     updatedAt: new Date().toISOString(),
   };
 }

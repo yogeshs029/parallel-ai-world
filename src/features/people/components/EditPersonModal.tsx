@@ -5,7 +5,7 @@ import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { useToast } from '../../../hooks/useToast';
 import { peopleService } from '../../../services/peopleService';
-import { Person, CommunicationStyle, PersonStatus } from '../../../types';
+import { Person, CommunicationStyle, PersonStatus, RelationshipRole } from '../../../types';
 import { cn } from '../../../lib/utils';
 
 export interface EditPersonModalProps {
@@ -44,6 +44,12 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
 
   const [name, setName] = useState(person.name);
   const [role, setRole] = useState(person.role);
+  const [relationshipRole, setRelationshipRole] = useState<RelationshipRole>(
+    person.relationshipRole || 'friend',
+  );
+  const [explicitMode, setExplicitMode] = useState<boolean>(
+    person.explicitMode ?? (person.relationshipRole === 'girlfriend' || person.relationshipRole === 'boyfriend'),
+  );
   const [description, setDescription] = useState(person.description || '');
   const [avatarEmoji, setAvatarEmoji] = useState(person.avatar?.emoji || person.avatarEmoji || '👤');
   const [status, setStatus] = useState<PersonStatus>(person.status || 'available');
@@ -75,6 +81,10 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
   useEffect(() => {
     setName(person.name);
     setRole(person.role);
+    setRelationshipRole(person.relationshipRole || 'friend');
+    setExplicitMode(
+      person.explicitMode ?? (person.relationshipRole === 'girlfriend' || person.relationshipRole === 'boyfriend'),
+    );
     setDescription(person.description || '');
     setAvatarEmoji(person.avatar?.emoji || person.avatarEmoji || '👤');
     setStatus(person.status || 'available');
@@ -147,6 +157,8 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
       const updated = await peopleService.updatePerson(person.worldId, person.id, {
         name: name.trim(),
         role: role.trim(),
+        relationshipRole: relationshipRole,
+        explicitMode: explicitMode,
         description: description.trim(),
         avatar: {
           emoji: avatarEmoji,
@@ -156,6 +168,13 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
           traits: selectedStyles,
           description: personalityDesc.trim(),
           communicationStyle: selectedStyles,
+        },
+        intelligence: {
+          enabled: true,
+          thinkingStyle: person.intelligence?.thinkingStyle || 'Balanced',
+          communicationStyle: selectedStyles,
+          initiativeLevel: person.intelligence?.initiativeLevel || 'Suggest things',
+          allowExplicitContent: explicitMode,
         },
         responsibilities,
         skills,
@@ -241,6 +260,43 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+
+        {/* Relationship & Explicit Mode */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="flex flex-col space-y-1.5">
+            <label className="text-xs font-semibold text-text-secondary">Relationship Role</label>
+            <select
+              value={relationshipRole}
+              onChange={(e) => {
+                const r = e.target.value as RelationshipRole;
+                setRelationshipRole(r);
+                if (r === 'girlfriend' || r === 'boyfriend') setExplicitMode(true);
+              }}
+              className="w-full bg-background-elevated text-text-primary text-xs rounded-xl border border-border px-3 py-2.5 focus:outline-none focus:border-brand-purple"
+            >
+              <option value="girlfriend">💖 Girlfriend</option>
+              <option value="boyfriend">💙 Boyfriend</option>
+              <option value="partner">💕 Romantic Partner</option>
+              <option value="friend">🤝 Close Friend</option>
+              <option value="colleague">💼 Colleague</option>
+              <option value="custom">✨ Custom</option>
+            </select>
+          </div>
+
+          <div className="flex items-center pt-5">
+            <label className="flex items-center gap-2 p-2.5 rounded-xl bg-background-elevated border border-border w-full cursor-pointer hover:border-brand-rose/40">
+              <input
+                type="checkbox"
+                checked={explicitMode}
+                onChange={(e) => setExplicitMode(e.target.checked)}
+                className="w-4 h-4 accent-brand-rose rounded"
+              />
+              <span className="text-xs font-bold text-text-primary">
+                🔥 Allow Explicit Intimate Roleplay
+              </span>
+            </label>
           </div>
         </div>
 

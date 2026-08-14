@@ -12,6 +12,8 @@ from .endpoints import (
     voice,
     relationships,
     conversations,
+    goals,
+    plans,
 )
 
 api_router = APIRouter()
@@ -36,3 +38,6 @@ api_router.include_router(voice.router, prefix="", tags=["Voice"])
 api_router.include_router(relationships.router, prefix="", tags=["Relationships"])
 api_router.include_router(conversations.router, prefix="", tags=["P2P Conversations"])
 
+# Module 9: Goals & Planning
+api_router.include_router(goals.router, prefix="", tags=["Goals"])
+api_router.include_router(plans.router, prefix="", tags=["Plans"])

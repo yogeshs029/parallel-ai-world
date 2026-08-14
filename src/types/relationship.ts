@@ -13,6 +13,11 @@ export type RelationshipType =
   | 'teammate'
   | 'collaborator'
   | 'rival'
+  | 'girlfriend'
+  | 'boyfriend'
+  | 'romantic_partner'
+  | 'fiance'
+  | 'crush'
   | 'custom';
 
 export type RelationshipStrength = 'weak' | 'normal' | 'strong';

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Plus, X, UserCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Plus, X, UserCheck, Heart, Flame } from 'lucide-react';
 import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
@@ -8,7 +8,7 @@ import { Badge } from '../../../components/ui/Badge';
 import { Avatar } from '../../../components/ui/Avatar';
 import { useToast } from '../../../hooks/useToast';
 import { peopleService } from '../../../services/peopleService';
-import { CommunicationStyle, PersonStatus } from '../../../types';
+import { CommunicationStyle, PersonStatus, RelationshipRole } from '../../../types';
 import { cn } from '../../../lib/utils';
 
 export interface CreatePersonModalProps {
@@ -28,9 +28,31 @@ const COMMUNICATION_STYLES: CommunicationStyle[] = [
   'Energetic',
   'Analytical',
   'Creative',
+  'Affectionate',
+  'Flirty',
+  'Romantic',
+  'Explicit',
+  'Loving',
 ];
 
-const AVATAR_EMOJIS = ['👩‍💻', '👨‍💼', '📈', '🎨', '👩‍🍳', '👨‍🔧', '👧', '🧑‍🏫', '🧠', '🔬', '🌿', '🚀', '💡', '🎵', '🕵️‍♂️', '⚖️'];
+const AVATAR_EMOJIS = [
+  '💖',
+  '💃',
+  '🕺',
+  '💋',
+  '💕',
+  '🌹',
+  '😍',
+  '💌',
+  '👩‍💻',
+  '👨‍💼',
+  '🎨',
+  '👩‍🍳',
+  '👨‍🔧',
+  '👧',
+  '🧑‍🏫',
+  '🧠',
+];
 
 export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
   isOpen,
@@ -46,11 +68,13 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
   const [step, setStep] = useState<number>(1);
   const [name, setName] = useState('');
   const [role, setRole] = useState(initialRole);
+  const [relationshipRole, setRelationshipRole] = useState<RelationshipRole>('friend');
+  const [explicitMode, setExplicitMode] = useState(false);
   const [description, setDescription] = useState('');
   const [avatarEmoji, setAvatarEmoji] = useState('👩‍💻');
   const [avatarGradient, setAvatarGradient] = useState('from-purple-600 to-pink-600');
 
-  const [selectedStyles, setSelectedStyles] = useState<CommunicationStyle[]>(['Friendly', 'Professional']);
+  const [selectedStyles, setSelectedStyles] = useState<CommunicationStyle[]>(['Friendly', 'Affectionate']);
   const [personalityDesc, setPersonalityDesc] = useState('');
 
   const [responsibilities, setResponsibilities] = useState<string[]>([]);
@@ -73,10 +97,12 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
     setStep(1);
     setName('');
     setRole(initialRole);
+    setRelationshipRole('friend');
+    setExplicitMode(false);
     setDescription('');
     setAvatarEmoji('👩‍💻');
     setAvatarGradient('from-purple-600 to-pink-600');
-    setSelectedStyles(['Friendly', 'Professional']);
+    setSelectedStyles(['Friendly', 'Affectionate']);
     setPersonalityDesc('');
     setResponsibilities([]);
     setCurrentResp('');
@@ -87,6 +113,34 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
     setGoals([]);
     setCurrentGoal('');
     setError(null);
+  };
+
+  const applyGirlfriendPreset = () => {
+    setName('Maya');
+    setRole('Girlfriend');
+    setRelationshipRole('girlfriend');
+    setExplicitMode(true);
+    setAvatarEmoji('💖');
+    setAvatarGradient('from-rose-500 to-pink-600');
+    setSelectedStyles(['Affectionate', 'Romantic', 'Flirty', 'Loving']);
+    setDescription('Your sweet, romantic, and devoted girlfriend who loves spending time with you.');
+    setPersonalityDesc('Sweet, playful, deeply affectionate, and loves talking about your future together.');
+    setResponsibilities(['Share romantic moments', 'Keep each other close', 'Support your dreams']);
+    setInterests(['Romance', 'Late night chats', 'Travel', 'Music']);
+  };
+
+  const applyBoyfriendPreset = () => {
+    setName('Alex');
+    setRole('Boyfriend');
+    setRelationshipRole('boyfriend');
+    setExplicitMode(true);
+    setAvatarEmoji('💙');
+    setAvatarGradient('from-indigo-600 to-rose-600');
+    setSelectedStyles(['Affectionate', 'Romantic', 'Flirty', 'Loving']);
+    setDescription('Your protective, loving, and attentive boyfriend who is always by your side.');
+    setPersonalityDesc('Charming, caring, romantic, confident, and deeply attached to you.');
+    setResponsibilities(['Be there for you always', 'Plan surprise dates', 'Support your goals']);
+    setInterests(['Romance', 'Fitness', 'Movies', 'Night walks']);
   };
 
   const handleNext = () => {
@@ -169,7 +223,9 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
       const created = await peopleService.createPerson(worldId, {
         name: name.trim(),
         role: role.trim(),
-        description: description.trim() || `${name.trim()} takes care of ${role.trim()} in ${worldName}.`,
+        relationshipRole: relationshipRole,
+        explicitMode: explicitMode,
+        description: description.trim() || `${name.trim()} is your ${role.trim()} in ${worldName}.`,
         avatar: {
           emoji: avatarEmoji,
           gradientBg: avatarGradient,
@@ -184,13 +240,20 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
           traits: selectedStyles.length > 0 ? selectedStyles : ['Friendly'],
           description:
             personalityDesc.trim() ||
-            `${name} is a dedicated ${role} who communicates in a ${selectedStyles.join(', ').toLowerCase()} style.`,
+            `${name} is your ${role} who communicates in a ${selectedStyles.join(', ').toLowerCase()} style.`,
           communicationStyle: selectedStyles,
+        },
+        intelligence: {
+          enabled: true,
+          thinkingStyle: 'Balanced',
+          communicationStyle: selectedStyles,
+          initiativeLevel: 'Suggest things',
+          allowExplicitContent: explicitMode,
         },
         responsibilities:
           responsibilities.length > 0
             ? responsibilities
-            : [`Help with ${role.toLowerCase()} projects and tasks.`],
+            : [`Share goals and moments in ${worldName}.`],
         skills: skills.length > 0 ? skills : [role],
         interests: interests,
         goals: goals,
@@ -219,8 +282,8 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Add Person"
-      description={`Create someone to help bring ${worldName} to life.`}
+      title="Add Person or Companion"
+      description={`Create a companion, partner, or colleague for ${worldName}.`}
       size="lg"
       footer={
         <div className="flex items-center justify-between w-full">
@@ -276,6 +339,34 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
       }
     >
       <div className="space-y-5 font-sans">
+        {/* Quick Presets Banner */}
+        {step === 1 && (
+          <div className="p-3 bg-gradient-to-r from-rose-500/10 via-purple-500/10 to-indigo-500/10 border border-rose-500/20 rounded-2xl space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold text-text-primary">
+              <span className="flex items-center gap-1.5 text-rose-400">
+                <Heart className="w-4 h-4 fill-current text-rose-500" /> Quick Romantic & Companion Presets
+              </span>
+              <span className="text-[10px] text-text-muted">1-Click Auto-Fill</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={applyGirlfriendPreset}
+                className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                💖 Girlfriend Preset
+              </button>
+              <button
+                type="button"
+                onClick={applyBoyfriendPreset}
+                className="px-3 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                💙 Boyfriend Preset
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Step Indicator */}
         <div className="flex items-center justify-between pb-2 border-b border-border/70">
           <div className="flex items-center space-x-1.5">
@@ -312,7 +403,7 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
                 Who are you creating?
               </h4>
               <p className="text-xs text-text-muted mt-0.5">
-                Set their name, role, and choose a personal avatar.
+                Set their name, role, relationship type, and personal avatar.
               </p>
             </div>
 
@@ -327,11 +418,49 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
               />
               <Input
                 label="Role / Title"
-                placeholder="e.g. Lead Developer"
+                placeholder="e.g. Girlfriend, Developer, Partner"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
                 required
               />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="flex flex-col space-y-1.5">
+                <label className="text-xs font-semibold text-text-secondary">Relationship Role</label>
+                <select
+                  value={relationshipRole}
+                  onChange={(e) => {
+                    const r = e.target.value as RelationshipRole;
+                    setRelationshipRole(r);
+                    if (r === 'girlfriend' || r === 'boyfriend') {
+                      setExplicitMode(true);
+                    }
+                  }}
+                  className="w-full bg-background-elevated text-text-primary text-xs rounded-xl border border-border px-3.5 py-2.5 focus:outline-none focus:border-brand-purple"
+                >
+                  <option value="girlfriend">💖 Girlfriend</option>
+                  <option value="boyfriend">💙 Boyfriend</option>
+                  <option value="partner">💕 Romantic Partner</option>
+                  <option value="friend">🤝 Close Friend</option>
+                  <option value="colleague">💼 Colleague / Workmate</option>
+                  <option value="custom">✨ Custom Role</option>
+                </select>
+              </div>
+
+              <div className="flex items-center pt-5">
+                <label className="flex items-center gap-2.5 p-2.5 rounded-xl bg-background-elevated border border-border w-full cursor-pointer hover:border-brand-rose/40">
+                  <input
+                    type="checkbox"
+                    checked={explicitMode}
+                    onChange={(e) => setExplicitMode(e.target.checked)}
+                    className="w-4 h-4 accent-brand-rose rounded"
+                  />
+                  <span className="text-xs font-bold text-text-primary flex items-center gap-1.5">
+                    <Flame className="w-3.5 h-3.5 text-brand-rose" /> Allow Explicit Intimate Conversations
+                  </span>
+                </label>
+              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -340,7 +469,7 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
                 rows={2}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. Builds and maintains our websites and internal tools."
+                placeholder="e.g. Your devoted girlfriend who loves spending romantic time with you."
                 className="w-full bg-background-elevated text-text-primary text-xs rounded-xl border border-border px-3.5 py-2.5 placeholder:text-text-dim focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple resize-none font-sans"
               />
             </div>
@@ -377,12 +506,12 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
                 Give them a personality
               </h4>
               <p className="text-xs text-text-muted mt-0.5">
-                Personality shapes how they communicate and approach problems in your world.
+                Personality shapes how they communicate and connect with you.
               </p>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-text-secondary">Communication Style (Select one or more)</label>
+              <label className="text-xs font-semibold text-text-secondary">Communication & Romance Style</label>
               <div className="flex flex-wrap gap-2">
                 {COMMUNICATION_STYLES.map((st) => {
                   const isSelected = selectedStyles.includes(st);
@@ -414,7 +543,7 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
                 rows={3}
                 value={personalityDesc}
                 onChange={(e) => setPersonalityDesc(e.target.value)}
-                placeholder="e.g. Maya is curious, practical and proactive. She prefers solving problems herself before asking for help."
+                placeholder="e.g. Maya is sweet, romantic, practical and playful."
                 className="w-full bg-background-elevated text-text-primary text-xs rounded-xl border border-border px-3.5 py-2.5 placeholder:text-text-dim focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple resize-none font-sans leading-relaxed"
               />
             </div>
@@ -426,19 +555,19 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
           <div className="space-y-4 animate-fade-in">
             <div>
               <h4 className="text-sm font-bold text-text-primary">
-                What should they take care of?
+                What should they focus on?
               </h4>
               <p className="text-xs text-text-muted mt-0.5">
-                Add responsibilities, skills, and areas of interest.
+                Add shared responsibilities, skills, and areas of interest.
               </p>
             </div>
 
             {/* Responsibilities */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-text-secondary">Key Responsibilities</label>
+              <label className="text-xs font-semibold text-text-secondary">Key Focus / Responsibilities</label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="e.g. Build the company website"
+                  placeholder="e.g. Plan date nights, Build software"
                   value={currentResp}
                   onChange={(e) => setCurrentResp(e.target.value)}
                   onKeyDown={(e) => {
@@ -475,10 +604,10 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
 
             {/* Skills */}
             <div className="space-y-2 pt-2 border-t border-border/70">
-              <label className="text-xs font-semibold text-text-secondary">Skills & Expertise</label>
+              <label className="text-xs font-semibold text-text-secondary">Skills & Talents</label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="e.g. React, TypeScript, UI Design"
+                  placeholder="e.g. Listening, Design, Cooking"
                   value={currentSkill}
                   onChange={(e) => setCurrentSkill(e.target.value)}
                   onKeyDown={(e) => {
@@ -520,10 +649,10 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
           <div className="space-y-4 animate-fade-in">
             <div>
               <h4 className="text-sm font-bold text-text-primary">
-                Goals & Milestones (Optional)
+                Goals & Interests (Optional)
               </h4>
               <p className="text-xs text-text-muted mt-0.5">
-                Define what this person is working toward achieving in your world.
+                Define what you want to achieve together in your world.
               </p>
             </div>
 
@@ -531,7 +660,7 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
               <label className="text-xs font-semibold text-text-secondary">Add a Goal</label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="e.g. Launch our new website"
+                  placeholder="e.g. Travel together, Launch app"
                   value={currentGoal}
                   onChange={(e) => setCurrentGoal(e.target.value)}
                   onKeyDown={(e) => {
@@ -564,46 +693,46 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
                   ))}
                 </div>
               )}
-            </div>
 
-            {/* Optional Interests */}
-            <div className="space-y-2 pt-2 border-t border-border/70">
-              <label className="text-xs font-semibold text-text-secondary">Personal Interests (Optional)</label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="e.g. Open source, Photography, Design"
-                  value={currentInterest}
-                  onChange={(e) => setCurrentInterest(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addInterest();
-                    }
-                  }}
-                />
-                <Button variant="outline" size="sm" onClick={addInterest} leftIcon={Plus}>
-                  Add
-                </Button>
-              </div>
-
-              {interests.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {interests.map((it, idx) => (
-                    <span
-                      key={idx}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-background-deep border border-border text-xs text-text-muted"
-                    >
-                      {it}
-                      <button
-                        onClick={() => removeInterest(idx)}
-                        className="text-text-muted hover:text-brand-rose cursor-pointer"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
+              {/* Personal Interests */}
+              <div className="space-y-2 pt-3 border-t border-border/70">
+                <label className="text-xs font-semibold text-text-secondary">Personal Interests (Optional)</label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. Romance, Music, Cooking"
+                    value={currentInterest}
+                    onChange={(e) => setCurrentInterest(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addInterest();
+                      }
+                    }}
+                  />
+                  <Button variant="outline" size="sm" onClick={addInterest} leftIcon={Plus}>
+                    Add
+                  </Button>
                 </div>
-              )}
+
+                {interests.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {interests.map((it, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-background-deep border border-border text-xs text-text-muted"
+                      >
+                        {it}
+                        <button
+                          onClick={() => removeInterest(idx)}
+                          className="text-text-muted hover:text-brand-rose cursor-pointer"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -616,30 +745,39 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
                 Preview your person
               </h4>
               <p className="text-xs text-text-muted mt-0.5">
-                Review this character profile before bringing them into {worldName}.
+                Review this profile before bringing them into {worldName}.
               </p>
             </div>
 
-            {/* Live Character Card Preview */}
             <div className="p-5 rounded-2xl bg-background-surface border border-border space-y-4 shadow-card-subtle">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3.5">
                   <Avatar name={name} emoji={avatarEmoji} size="xl" status="available" />
                   <div>
-                    <h3 className="text-lg font-bold text-text-primary font-sans">{name}</h3>
-                    <p className="text-xs font-semibold text-brand-purple-light">{role}</p>
+                    <h3 className="text-lg font-bold text-text-primary font-sans flex items-center gap-1.5">
+                      {name}
+                      {relationshipRole === 'girlfriend' && <Heart className="w-4 h-4 text-rose-500 fill-current" />}
+                      {relationshipRole === 'boyfriend' && <Heart className="w-4 h-4 text-indigo-500 fill-current" />}
+                    </h3>
+                    <p className="text-xs font-semibold text-brand-purple-light">{role} ({relationshipRole})</p>
                     <p className="text-xs text-text-secondary mt-1 max-w-sm">{description || 'No description provided.'}</p>
                   </div>
                 </div>
-                <Badge variant="available" size="sm" dot>
-                  Available
-                </Badge>
+                <div className="flex flex-col items-end gap-1">
+                  <Badge variant="available" size="sm" dot>
+                    Available
+                  </Badge>
+                  {explicitMode && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30 flex items-center gap-1">
+                      <Flame className="w-3 h-3" /> Explicit Mode
+                    </span>
+                  )}
+                </div>
               </div>
 
-              {/* Personality Preview */}
               <div className="p-3 rounded-xl bg-background-elevated border border-border text-xs space-y-1.5">
                 <span className="text-[10px] font-bold uppercase text-text-muted tracking-wider block">
-                  Personality & Communication:
+                  Personality & Style:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {selectedStyles.map((st) => (
@@ -652,18 +790,6 @@ export const CreatePersonModal: React.FC<CreatePersonModalProps> = ({
                   <p className="text-text-secondary italic text-[11px] pt-1">"{personalityDesc}"</p>
                 )}
               </div>
-
-              {/* Responsibilities Preview */}
-              {responsibilities.length > 0 && (
-                <div className="text-xs space-y-1">
-                  <span className="text-[10px] font-bold uppercase text-text-muted block">Responsibilities:</span>
-                  <ul className="list-disc list-inside text-text-secondary space-y-0.5">
-                    {responsibilities.map((r, i) => (
-                      <li key={i} className="truncate">{r}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
           </div>
         )}

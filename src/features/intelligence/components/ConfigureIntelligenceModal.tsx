@@ -29,6 +29,11 @@ const COMMUNICATION_STYLES: CommunicationStyle[] = [
   'Warm',
   'Concise',
   'Detailed',
+  'Affectionate',
+  'Flirty',
+  'Romantic',
+  'Explicit',
+  'Loving',
 ];
 
 const INITIATIVE_LEVELS: { id: InitiativeLevel; label: string; desc: string }[] = [

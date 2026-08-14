@@ -10,3 +10,6 @@ export * from './runtime';
 export * from './voice';
 export * from './relationship';
 export * from './communication';
+export * from './goal';
+export * from './plan';
+

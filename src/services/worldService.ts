@@ -54,6 +54,8 @@ const defaultEmojiMap: Record<WorldType, string> = {
   study: '📚',
   game: '🎮',
   personal: '👤',
+  romantic: '💖',
+  dating: '🌹',
   custom: '✨',
 };
 
@@ -97,6 +99,16 @@ const defaultGradientMap: Record<WorldType, { accentColor: string; coverGradient
     accentColor: 'purple',
     coverGradient: 'from-purple-600/30 via-indigo-600/20 to-transparent',
     badgeText: 'Personal',
+  },
+  romantic: {
+    accentColor: 'rose',
+    coverGradient: 'from-rose-600/30 via-pink-600/20 to-transparent',
+    badgeText: 'Romantic',
+  },
+  dating: {
+    accentColor: 'pink',
+    coverGradient: 'from-pink-600/30 via-rose-600/20 to-transparent',
+    badgeText: 'Dating',
   },
   custom: {
     accentColor: 'purple',

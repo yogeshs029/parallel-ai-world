@@ -10,7 +10,23 @@ export type CommunicationStyle =
   | 'Creative'
   | 'Warm'
   | 'Concise'
-  | 'Detailed';
+  | 'Detailed'
+  | 'Affectionate'
+  | 'Flirty'
+  | 'Romantic'
+  | 'Explicit'
+  | 'Loving'
+  | 'Playful';
+
+export type RomanceLevel = 'friendly' | 'flirty' | 'romantic' | 'explicit';
+
+export type RelationshipRole =
+  | 'girlfriend'
+  | 'boyfriend'
+  | 'partner'
+  | 'friend'
+  | 'colleague'
+  | 'custom';
 
 export type ThinkingStyle =
   | 'Balanced'
@@ -42,6 +58,8 @@ export interface PersonIntelligence {
   communicationStyle: CommunicationStyle[];
   initiativeLevel: InitiativeLevel;
   customInstructions?: string;
+  allowExplicitContent?: boolean;
+  romanceLevel?: RomanceLevel;
 }
 
 export interface Person {
@@ -57,6 +75,8 @@ export interface Person {
   avatarBg?: string;
   personality: PersonPersonality;
   intelligence?: PersonIntelligence;
+  relationshipRole?: RelationshipRole;
+  explicitMode?: boolean;
   responsibilities: string[];
   skills: string[];
   interests: string[];
@@ -78,6 +98,8 @@ export interface CreatePersonInput {
   avatar?: Partial<PersonAvatar>;
   personality?: Partial<PersonPersonality>;
   intelligence?: Partial<PersonIntelligence>;
+  relationshipRole?: RelationshipRole;
+  explicitMode?: boolean;
   responsibilities?: string[];
   skills?: string[];
   interests?: string[];
@@ -92,6 +114,8 @@ export interface UpdatePersonInput {
   avatar?: Partial<PersonAvatar>;
   personality?: Partial<PersonPersonality>;
   intelligence?: Partial<PersonIntelligence>;
+  relationshipRole?: RelationshipRole;
+  explicitMode?: boolean;
   responsibilities?: string[];
   skills?: string[];
   interests?: string[];

@@ -11,6 +11,9 @@ import {
   Mic,
   Radio,
   Loader2,
+  Heart,
+  Flame,
+  Settings,
 } from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
 import { Button } from '../components/ui/Button';
@@ -132,7 +135,6 @@ export const PersonChatPage: React.FC = () => {
     }
   }, [worldId, personId]);
 
-  // Clean, realistic opening conversation prompt without synthetic system directives
   const triggerPersonOpening = useCallback(async (w: World, p: Person) => {
     if (!p || !w) return;
     const assistantMsgId = `asst-open-${Date.now()}`;
@@ -145,10 +147,19 @@ export const PersonChatPage: React.FC = () => {
     setMessages([openingMsg]);
     setIsStreaming(true);
 
+    const isRomantic =
+      p.relationshipRole === 'girlfriend' ||
+      p.relationshipRole === 'boyfriend' ||
+      p.explicitMode;
+
+    const userPingContent = isRomantic
+      ? `Hey ${p.name} ❤️, I'm thinking about you!`
+      : `Hey ${p.name}, what's on your mind today?`;
+
     const userPing: ChatMessage = {
       id: `ping-${Date.now()}`,
       role: 'user',
-      content: `Hey ${p.name}, what's on your mind today?`,
+      content: userPingContent,
       timestamp: new Date().toISOString(),
     };
 
@@ -172,6 +183,32 @@ export const PersonChatPage: React.FC = () => {
       setIsStreaming(false);
     }
   }, []);
+
+  const handleToggleExplicitMode = async () => {
+    if (!person || !world) return;
+    const newMode = !person.explicitMode;
+    const updated = await peopleService.updatePerson(world.id, person.id, {
+      explicitMode: newMode,
+      intelligence: {
+        ...(person.intelligence || {
+          enabled: true,
+          thinkingStyle: 'Balanced',
+          communicationStyle: ['Friendly'],
+          initiativeLevel: 'Suggest things',
+        }),
+        allowExplicitContent: newMode,
+      },
+    });
+    if (updated) {
+      setPerson(updated);
+      toast.success(
+        newMode ? '🔥 Explicit Mode Enabled' : 'Standard Mode Enabled',
+        newMode
+          ? `${person.name} can now engage in uncensored, explicit & romantic dialogue.`
+          : `${person.name} switched to standard conversation.`,
+      );
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -366,19 +403,28 @@ export const PersonChatPage: React.FC = () => {
     );
   }
 
-  const personEmoji = person.avatar?.emoji || person.avatarEmoji || '👤';
+  const isGirlfriend = person.relationshipRole === 'girlfriend';
+  const isBoyfriend = person.relationshipRole === 'boyfriend';
+  const isRomantic = isGirlfriend || isBoyfriend || person.relationshipRole === 'partner';
+
+  const personEmoji = person.avatar?.emoji || person.avatarEmoji || (isGirlfriend ? '💖' : isBoyfriend ? '💙' : '👤');
+
   const statusLabel = presenceState === 'speaking'
     ? 'Speaking...'
     : isStreaming
     ? 'Typing...'
     : isRecording
     ? 'Listening...'
+    : isGirlfriend
+    ? '❤️ Girlfriend • Online'
+    : isBoyfriend
+    ? '💙 Boyfriend • Online'
     : 'Active now';
 
   return (
-    <div className="chat-shell">
+    <div className={cn('chat-shell', isRomantic && 'border-rose-500/30 shadow-rose-500/10')}>
       {/* ── iOS Header ── */}
-      <div className="chat-header">
+      <div className={cn('chat-header', isRomantic && 'bg-gradient-to-r from-slate-900 via-rose-950/20 to-slate-900')}>
         <Link
           to={`/world/${world.id}/people/${person.id}`}
           className="chat-back-btn"
@@ -397,10 +443,14 @@ export const PersonChatPage: React.FC = () => {
             />
           </div>
           <div className="chat-header-info">
-            <span className="chat-header-name">{person.name}</span>
+            <span className="chat-header-name flex items-center gap-1">
+              {person.name}
+              {isGirlfriend && <Heart className="w-3.5 h-3.5 text-rose-500 fill-current" />}
+              {isBoyfriend && <Heart className="w-3.5 h-3.5 text-indigo-400 fill-current" />}
+            </span>
             <span className={cn(
-              'chat-header-status font-medium',
-              isStreaming || presenceState === 'speaking' ? 'text-[#34c759]' : 'text-slate-400'
+              'chat-header-status font-medium flex items-center gap-1',
+              isRomantic ? 'text-rose-400' : isStreaming || presenceState === 'speaking' ? 'text-[#34c759]' : 'text-slate-400'
             )}>
               {statusLabel}
             </span>
@@ -408,11 +458,28 @@ export const PersonChatPage: React.FC = () => {
         </div>
 
         <div className="chat-header-actions">
+          <button
+            onClick={handleToggleExplicitMode}
+            className={cn(
+              'chat-action-btn flex items-center gap-1 px-2 py-1 text-[11px] font-bold rounded-lg transition-all',
+              person.explicitMode
+                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            )}
+            title={person.explicitMode ? 'Explicit Mode Enabled (Click to toggle)' : 'Enable Explicit Mode'}
+          >
+            <Flame className={cn('w-4 h-4', person.explicitMode ? 'text-rose-400 fill-current animate-pulse' : '')} />
+            <span className="hidden md:inline">{person.explicitMode ? 'Explicit ON' : 'Explicit'}</span>
+          </button>
+
           {presenceState === 'speaking' && (
             <button onClick={handleStopSpeaking} className="chat-action-btn" title="Stop speaking">
               <Square className="w-4 h-4 fill-current" />
             </button>
           )}
+          <button onClick={intelligenceDisclosure.onOpen} className="chat-action-btn" title="Persona Settings">
+            <Settings className="w-4 h-4" />
+          </button>
           <button onClick={voiceConversationDisclosure.onOpen} className="chat-action-btn" title="Voice call">
             <Radio className="w-4 h-4" />
           </button>

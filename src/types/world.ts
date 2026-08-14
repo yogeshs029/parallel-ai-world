@@ -7,6 +7,8 @@ export type WorldType =
   | 'study'
   | 'game'
   | 'personal'
+  | 'romantic'
+  | 'dating'
   | 'custom';
 
 // Backward compatibility alias

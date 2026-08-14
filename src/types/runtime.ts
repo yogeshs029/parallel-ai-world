@@ -64,6 +64,15 @@ export interface PersonPermissions {
   receiveMessages: boolean;
   viewConversations: boolean;
   createGroupConversations: boolean;
+  goalCreate: boolean;
+  goalView: boolean;
+  goalEdit: boolean;
+  goalPause: boolean;
+  goalCancel: boolean;
+  planCreate: boolean;
+  planEdit: boolean;
+  planApprove: boolean;
+  taskDelegate: boolean;
   updatedAt: string;
 }
 
