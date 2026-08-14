@@ -1,6 +1,6 @@
 import { Notification } from '../types/runtime';
+import { API_BASE } from '../lib/apiConfig';
 
-const API_BASE = 'http://127.0.0.1:8000/api';
 const LOCAL_STORAGE_KEY = 'parallel_ai_notifications_v1';
 
 const INITIAL_FALLBACK_NOTIFS: Notification[] = [

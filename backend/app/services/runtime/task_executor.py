@@ -10,7 +10,7 @@ from .repositories import (
     conversation_repository,
 )
 from .broadcaster import broadcaster
-from ..llm.ollama import OllamaProvider
+from ..llm.service import intelligence_service
 from ..knowledge.retriever import knowledge_retriever
 from ..memory.retriever import memory_retriever
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 class TaskExecutorService:
     def __init__(self):
-        self.ollama = OllamaProvider()
+        pass
 
     async def execute_task(self, task: RuntimeTask) -> RuntimeTask:
         """
@@ -64,7 +64,7 @@ class TaskExecutorService:
 
         try:
             llm_messages = [{"role": "user", "content": prompt}]
-            result_text = await self.ollama.generate(llm_messages)
+            result_text = await intelligence_service.generate(llm_messages)
             if not result_text or not result_text.strip():
                 result_text = f"Completed work on '{task.title}' according to project requirements."
             result_text = result_text.strip()

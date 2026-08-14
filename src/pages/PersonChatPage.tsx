@@ -33,6 +33,7 @@ import { peopleService } from '../services/peopleService';
 import { conversationService, ChatMessage } from '../services/conversationService';
 import { voiceService } from '../services/voiceService';
 import { audioQueuePlayer } from '../services/audioQueuePlayer';
+import { API_BASE } from '../lib/apiConfig';
 import { World, Person } from '../types';
 import { VoiceProfile, VoiceState } from '../types/voice';
 import { cn } from '../lib/utils';
@@ -98,7 +99,7 @@ export const PersonChatPage: React.FC = () => {
 
       const history = conversationService.getMessages(personId);
       try {
-        const backendRes = await fetch(`http://127.0.0.1:8000/api/worlds/${worldId}/people/${personId}/messages`);
+        const backendRes = await fetch(`${API_BASE}/worlds/${worldId}/people/${personId}/messages`);
         if (backendRes.ok) {
           const backendMsgs = await backendRes.json();
           if (Array.isArray(backendMsgs) && backendMsgs.length > 0) {

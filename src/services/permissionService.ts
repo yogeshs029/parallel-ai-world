@@ -1,6 +1,6 @@
 import { PersonPermissions } from '../types/runtime';
+import { API_BASE } from '../lib/apiConfig';
 
-const API_BASE = 'http://127.0.0.1:8000/api';
 const LOCAL_STORAGE_KEY = 'parallel_ai_permissions_v1';
 
 function getDefaultPermissions(worldId: string, personId: string): PersonPermissions {

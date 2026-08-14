@@ -1,15 +1,23 @@
 import os
 from pydantic_settings import BaseSettings
-from typing import List
+from typing import List, Optional
 
 class Settings(BaseSettings):
     API_PREFIX: str = "/api"
     PROJECT_NAME: str = "Parallel AI World Backend"
     
-    # Ollama Configuration
+    # LLM Provider Configuration ("ollama" for local dev, "cloudflare" for production)
+    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "ollama")
+
+    # Ollama Configuration (Local Development)
     OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "mistral:latest")
     
+    # Cloudflare Workers AI Configuration (Cloud Production)
+    CLOUDFLARE_AI_MODEL: str = os.getenv("CLOUDFLARE_AI_MODEL", "@cf/meta/llama-3.1-8b-instruct")
+    CLOUDFLARE_ACCOUNT_ID: Optional[str] = os.getenv("CLOUDFLARE_ACCOUNT_ID", None)
+    CLOUDFLARE_API_TOKEN: Optional[str] = os.getenv("CLOUDFLARE_API_TOKEN", None)
+
     # Server Configuration
     BACKEND_PORT: int = int(os.getenv("BACKEND_PORT", "8000"))
     BACKEND_HOST: str = os.getenv("BACKEND_HOST", "0.0.0.0")

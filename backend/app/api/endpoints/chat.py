@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 from typing import AsyncGenerator
 
 from ...schemas.chat import ChatStreamRequest
-from ...services.llm.ollama import OllamaProvider
+from ...services.llm.service import intelligence_service
 from ...services.intelligence.prompt_builder import build_system_prompt
 from ...services.memory.retriever import memory_retriever
 from ...services.memory.extraction import memory_extraction_service
@@ -14,7 +14,6 @@ from ...services.knowledge.retriever import knowledge_retriever
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-ollama_provider = OllamaProvider()
 
 async def _extract_memories_task(world_id: str, person_id: str, messages: list):
     """Background task to extract memories from conversation"""
@@ -31,6 +30,7 @@ async def _extract_memories_task(world_id: str, person_id: str, messages: list):
 async def chat_stream(request: ChatStreamRequest, backgroundTasks: BackgroundTasks):
     """
     Stream conversational responses using SSE with Memory + Knowledge RAG retrieval.
+    Routes via IntelligenceService to active provider (Ollama or Cloudflare Workers AI).
     """
     # 1. Extract latest user query
     latest_user_query = ""
@@ -82,7 +82,7 @@ async def chat_stream(request: ChatStreamRequest, backgroundTasks: BackgroundTas
 
     async def sse_event_generator() -> AsyncGenerator[str, None]:
         try:
-            async for token in ollama_provider.stream_chat(llm_messages):
+            async for token in intelligence_service.stream_chat(llm_messages):
                 accumulated_response.append(token)
                 event_data = json.dumps({"token": token, "done": False})
                 yield f"data: {event_data}\n\n"
@@ -109,7 +109,7 @@ async def chat_stream(request: ChatStreamRequest, backgroundTasks: BackgroundTas
 
         except Exception as e:
             logger.error(f"Error streaming response: {e}")
-            err_data = json.dumps({"token": f"\n[Error: {str(e)}]", "done": True})
+            err_data = json.dumps({"token": "\nMaya's intelligence is temporarily unavailable. Please try again.", "done": True})
             yield f"data: {err_data}\n\n"
 
     return StreamingResponse(
@@ -168,7 +168,7 @@ async def chat_unary(request: ChatStreamRequest, background_tasks: BackgroundTas
     for msg in request.messages:
         llm_messages.append({"role": msg.role, "content": msg.content})
 
-    response_text = await ollama_provider.generate(llm_messages)
+    response_text = await intelligence_service.generate(llm_messages)
 
     if response_text and request.world.id:
         history_for_extraction = [

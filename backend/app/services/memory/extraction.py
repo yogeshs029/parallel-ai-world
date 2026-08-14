@@ -5,7 +5,8 @@ from typing import List, Dict, Optional, Any
 from datetime import datetime
 
 from ...schemas.memory import MemoryCreate, MemoryUpdate, ExtractedMemoryCandidate, Memory
-from ..llm.ollama import OllamaProvider
+from ..llm.base import LLMProvider
+from ..llm.service import get_llm_provider
 from .repository import memory_repository, MemoryRepository
 
 logger = logging.getLogger(__name__)
@@ -35,11 +36,15 @@ Do NOT output any markdown fences, backticks, or other text outside the JSON obj
 class MemoryExtractionService:
     def __init__(
         self,
-        llm_provider: OllamaProvider = None,
+        llm_provider: Optional[LLMProvider] = None,
         repository: MemoryRepository = memory_repository,
     ):
-        self.llm = llm_provider or OllamaProvider()
+        self._custom_llm = llm_provider
         self.repository = repository
+
+    @property
+    def llm(self) -> LLMProvider:
+        return self._custom_llm or get_llm_provider()
 
     def _is_trivial(self, text: str) -> bool:
         cleaned = text.lower().strip()

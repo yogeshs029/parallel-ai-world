@@ -1,9 +1,8 @@
 from fastapi import APIRouter
-from ...services.llm.ollama import OllamaProvider
+from ...services.llm.service import intelligence_service
 from ...core.config import settings
 
 router = APIRouter()
-ollama_provider = OllamaProvider()
 
 @router.get("")
 async def backend_health():
@@ -11,12 +10,13 @@ async def backend_health():
         "status": "ok",
         "service": settings.PROJECT_NAME,
         "api_prefix": settings.API_PREFIX,
+        "provider": settings.LLM_PROVIDER,
     }
 
 @router.get("/llm")
 async def llm_health():
     """
-    Check if the local Ollama provider is online.
+    Check if the active LLM provider (Ollama or Cloudflare Workers AI) is online.
     """
-    result = await ollama_provider.health_check()
+    result = await intelligence_service.health_check()
     return result

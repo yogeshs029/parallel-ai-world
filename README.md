@@ -6,104 +6,109 @@ Parallel AI World allows users to create persistent digital worlds (e.g. Home, F
 
 ---
 
-## 🏛️ System Architecture
+## 🏛️ System & AI Architecture
+
+Parallel AI World uses a decoupled **LLM Provider Abstraction** designed for both zero-setup cloud production and offline local development:
 
 ```
-React / Vite (Frontend @ Port 3000)
-       ↓  (HTTP / Server-Sent Events)
-FastAPI Backend (@ Port 8000)
-       ↓  (HTTP API / Streaming)
-LLM Provider Abstraction (OllamaProvider)
-       ↓
-Local Ollama Service (@ Port 11434)
+                            ┌──────────────────────────────┐
+                            │   Browser (Desktop / Mobile) │
+                            └──────────────┬───────────────┘
+                                           │
+                          fetch('/api/chat/stream') [SSE]
+                                           │
+                    ┌──────────────────────┴──────────────────────┐
+                    │                                             │
+          [PRODUCTION (Cloudflare)]                      [LOCAL DEVELOPMENT]
+                    │                                             │
+          Cloudflare Worker (`src/worker/`)             Vite Dev Proxy (:3000)
+                    │                                             │
+        Cloudflare Workers AI (`env.AI`)               Python FastAPI Backend (:8000)
+                    │                                             │
+         `@cf/meta/llama-3.1-8b-instruct`               `IntelligenceService` (LLMProvider)
+                    │                                             │
+                    │                                       `OllamaProvider`
+                    │                                             │
+                    │                                  Ollama (`localhost:11434`)
+                    │                                             │
+                    └──────────────────────┬──────────────────────┘
+                                           │
+                             Streaming Token Responses
+                                           ↓
+                                        Browser
 ```
 
-- **Frontend**: React 18, TypeScript, Tailwind CSS, Lucide icons, Vite.
-- **Backend API**: Python 3.10+, FastAPI, HTTPX (async streaming), Pydantic v2.
-- **Local Intelligence**: Ollama (`mistral:latest`, `llama3.2`, or configurable).
+### 1. ☁️ Production Mode (Cloudflare Workers AI)
+- **Ollama is NOT required** for end users opening the app on mobile, tablet, or another computer.
+- Model inference runs directly on **Cloudflare Workers AI** using `@cf/meta/llama-3.1-8b-instruct`.
+- Single-page application assets and AI inference stream from the same Cloudflare Worker edge origin.
+
+### 2. 💻 Local Development Mode (Ollama)
+- Uses local Ollama service (`http://localhost:11434`) with `mistral:latest` or any local model.
+- Fast iteration without external API consumption.
 
 ---
 
 ## 🚀 Quick Start Guide
 
-### 1. Prerequisites
+### Local Development Setup
 
-1. **Node.js**: v18+ and `npm`.
-2. **Python**: v3.10+ and `pip`.
-3. **Ollama**: Download and install from [ollama.com](https://ollama.com).
+1. **Install Node & Python Dependencies**:
+   ```bash
+   npm install
+   pip install -r backend/requirements.txt
+   ```
 
-### 2. Start Ollama Local Service
+2. **Start Local Ollama** (Required for local offline development):
+   ```bash
+   ollama pull mistral
+   ollama serve
+   ```
 
-```bash
-# Pull the default local model
-ollama pull mistral
+3. **Start FastAPI Backend**:
+   ```bash
+   python -m uvicorn backend.app.main:app --port 8000 --host 127.0.0.1 --reload
+   ```
 
-# Start the Ollama daemon (if not already running in background)
-ollama serve
-```
+4. **Start Vite Dev Server**:
+   ```bash
+   npm run dev
+   ```
+   Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 3. Backend Setup & Run (FastAPI)
+---
 
-```bash
-# Install Python dependencies
-pip install -r backend/requirements.txt
+## ☁️ Production Deployment (Cloudflare)
 
-# Run the FastAPI server on port 8000
-python -m uvicorn backend.app.main:app --port 8000 --host 127.0.0.1 --reload
-```
+1. **Build the production SPA**:
+   ```bash
+   npm run build
+   ```
 
-- **Swagger Documentation**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- **Health Check**: [http://127.0.0.1:8000/api/health/llm](http://127.0.0.1:8000/api/health/llm)
-
-### 4. Frontend Setup & Run (Vite)
-
-```bash
-# Install Node dependencies
-npm install
-
-# Start Vite dev server
-npm run dev
-```
-
-Open [http://localhost:3000/](http://localhost:3000/) in your browser.
+2. **Deploy to Cloudflare Workers**:
+   ```bash
+   npx wrangler deploy
+   ```
 
 ---
 
 ## ⚙️ Environment Configuration
 
-The backend supports configuration via environment variables or a `.env` file in the root / `backend` folder:
-
-| Variable | Default Value | Description |
-|---|---|---|
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | URL of the local Ollama daemon |
-| `OLLAMA_MODEL` | `mistral:latest` | Default local model to use for character intelligence |
-| `BACKEND_PORT` | `8000` | Port for the FastAPI server |
-| `BACKEND_HOST` | `0.0.0.0` | Host binding for FastAPI |
-
----
-
-## 🧠 Person Intelligence Model
-
-Every Person in a World has a configurable intelligence profile:
-
-- **Thinking Style**:
-  - `Balanced` — Pragmatic and well-rounded
-  - `Analytical` — Methodical and evidence-based
-  - `Creative` — Imaginative and unconventional
-  - `Practical` — Action-oriented and simple
-  - `Detailed` — Deep and exhaustive
-- **Communication Style**: `Friendly`, `Professional`, `Direct`, `Warm`, `Concise`, `Detailed`
-- **Initiative Level**:
-  - `Wait for me` — Direct answers only
-  - `Suggest things` — Proactive suggestions
-  - `Take initiative` — Anticipates next steps
-- **Custom Instructions**: Freeform behavioral guidance (e.g. *"Always explain with TypeScript examples"*).
+| Variable | Environment | Default Value | Description |
+|---|---|---|---|
+| `LLM_PROVIDER` | Backend / Worker | `ollama` (dev) / `cloudflare` (prod) | Active LLM inference provider |
+| `CLOUDFLARE_AI_MODEL` | Worker / Backend | `@cf/meta/llama-3.1-8b-instruct` | Cloudflare Workers AI model |
+| `OLLAMA_BASE_URL` | Local Backend | `http://localhost:11434` | URL of the local Ollama daemon |
+| `OLLAMA_MODEL` | Local Backend | `mistral:latest` | Local Ollama model name |
+| `BACKEND_PORT` | Local Backend | `8000` | Local FastAPI port |
 
 ---
 
-## 🧪 Verification & Health Diagnostics
+## 🧪 Verification & Diagnostics
 
-- **TypeScript Compilation**: `npx tsc --noEmit`
+- **TypeScript Type Check**: `npx tsc --noEmit`
 - **ESLint**: `npm run lint`
-- **Production Bundle**: `npm run build`
-- **LLM Streaming Test**: `python backend/test_chat.py`
+- **Production Build**: `npm run build`
+- **Cloudflare Worker Dry-Run**: `npx wrangler deploy --dry-run`
+- **LLM Provider Unit Tests**: `python backend/test_llm_providers.py`
+- **Voice Integration Flow**: `python backend/test_voice_flow.py`

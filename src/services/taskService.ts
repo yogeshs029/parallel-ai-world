@@ -1,8 +1,8 @@
 import { Task, TaskPriority, TaskStatus } from '../types';
 import { RuntimeTask } from '../types/runtime';
+import { API_BASE } from '../lib/apiConfig';
 import { INITIAL_TASKS } from './mockData';
 
-const API_BASE = 'http://127.0.0.1:8000/api';
 let tasksStore: Task[] = [...INITIAL_TASKS];
 
 export const taskService = {

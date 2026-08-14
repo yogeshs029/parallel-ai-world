@@ -1,6 +1,6 @@
 import { Memory, CreateMemoryInput, UpdateMemoryInput, SearchMemoryQuery } from '../types/memory';
+import { API_BASE } from '../lib/apiConfig';
 
-const API_BASE = 'http://127.0.0.1:8000/api';
 const LOCAL_STORAGE_KEY = 'parallel_ai_memories_v2';
 
 const INITIAL_FALLBACK_MEMORIES: Memory[] = [

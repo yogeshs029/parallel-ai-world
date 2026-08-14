@@ -1,4 +1,5 @@
 import { World, Person } from '../types';
+import { API_BASE } from '../lib/apiConfig';
 
 export interface ChatMessage {
   id: string;
@@ -8,7 +9,6 @@ export interface ChatMessage {
 }
 
 const STORAGE_PREFIX = 'parallel_ai_chat_';
-const API_BASE = 'http://127.0.0.1:8000/api';
 
 export const conversationService = {
   getMessages(personId: string): ChatMessage[] {
