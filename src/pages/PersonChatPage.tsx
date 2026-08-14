@@ -6,7 +6,6 @@ import {
   Square,
   RotateCcw,
   AlertCircle,
-  Sparkles,
   RefreshCw,
   Brain,
   Mic,
@@ -53,6 +52,7 @@ export const PersonChatPage: React.FC = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const hasAutoInitiatedRef = useRef(false);
 
   const intelligenceDisclosure = useDisclosure(false);
   const memoryDisclosure = useDisclosure(false);
@@ -117,12 +117,21 @@ export const PersonChatPage: React.FC = () => {
       }
       setMessages(history);
 
-      // Check Ollama health
+      // If this is a fresh conversation, trigger a proactive opening from the person
+      if (history.length === 0 && !hasAutoInitiatedRef.current) {
+        hasAutoInitiatedRef.current = true;
+        // Small delay so UI is settled
+        setTimeout(() => {
+          triggerPersonOpening(w!, p!);
+        }, 600);
+      }
+
+      // Check LLM health
       const health = await conversationService.checkLLMHealth();
       setIsLLMOnline(health.available);
       if (!health.available) {
         setErrorBanner(
-          `${p?.name || 'Your person'}'s intelligence service is currently unavailable. Ensure Ollama is running.`,
+          `${p?.name || 'Your person'} can't connect right now. Check that Ollama is running.`,
         );
       } else {
         setErrorBanner(null);
@@ -133,6 +142,50 @@ export const PersonChatPage: React.FC = () => {
       setIsLoading(false);
     }
   }, [worldId, personId]);
+
+  // Generate a natural proactive opening message from the person
+  const triggerPersonOpening = useCallback(async (w: World, p: Person) => {
+    if (!p || !w) return;
+    const assistantMsgId = `asst-open-${Date.now()}`;
+    const openingMsg: ChatMessage = {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date().toISOString(),
+    };
+    setMessages([openingMsg]);
+    setIsStreaming(true);
+
+    // Build a hidden system trigger — NOT shown to user
+    const hiddenTrigger: ChatMessage = {
+      id: `trigger-${Date.now()}`,
+      role: 'user',
+      content: `[SYSTEM: Start the conversation naturally. Say something relevant to your role as ${p.role} in ${w.name}. Don't introduce yourself — they already know you. Keep it short and casual — like you're checking in, mentioning something you're working on, or asking about something relevant. NO greetings like "Hey!" or "Hi!" — just start talking like you normally would mid-day.]`,
+      timestamp: new Date().toISOString(),
+    };
+
+    let content = '';
+    try {
+      await conversationService.streamChat(
+        w,
+        p,
+        [hiddenTrigger],
+        (token) => {
+          content += token;
+          setMessages([{ ...openingMsg, content }]);
+        },
+      );
+      const finalMsg = { ...openingMsg, content };
+      conversationService.saveMessages(p.id, [finalMsg]);
+      setMessages([finalMsg]);
+    } catch (e) {
+      // If opening fails, show an empty state without self-introduction
+      setMessages([]);
+    } finally {
+      setIsStreaming(false);
+    }
+  }, []);
+
 
   useEffect(() => {
     loadData();
@@ -367,14 +420,7 @@ export const PersonChatPage: React.FC = () => {
 
   const personEmoji = person.avatar?.emoji || person.avatarEmoji || '👤';
 
-  const starterPrompts = [
-    `Tell me about yourself and what you're working on`,
-    `What can you help me with in ${world.name}?`,
-    person.responsibilities && person.responsibilities.length > 0
-      ? `Help me with ${person.responsibilities[0]}`
-      : `Let's discuss our priorities`,
-    `What recommendations do you have for ${world.name}?`,
-  ];
+
 
   return (
     <div className="flex flex-col h-[calc(100dvh-60px)] font-sans max-w-3xl mx-auto">
@@ -471,39 +517,21 @@ export const PersonChatPage: React.FC = () => {
       {/* ── Messages ── */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
         {messages.length === 0 ? (
-          /* Welcome / Starter prompts */
-          <div className="flex flex-col items-center justify-center min-h-[55vh] text-center p-4 space-y-5 animate-fade-up max-w-sm mx-auto">
-            <div className="relative">
-              <Avatar name={person.name} emoji={personEmoji} size="xl" />
-              <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full cosmos-card flex items-center justify-center text-sm shadow-cosmos-sm">
-                ✨
-              </div>
+          /* Conversation starting... spinner — shown only if proactive message is loading */
+          <div className="flex flex-col items-center justify-center min-h-[55vh] gap-4 animate-fade-in">
+            <Avatar name={person.name} emoji={personEmoji} size="xl" />
+            <div className="text-center space-y-1.5">
+              <p className="text-sm font-semibold text-text-primary">{person.name}</p>
+              <p className="text-xs text-text-muted">{person.role}</p>
             </div>
-            <div className="space-y-1.5">
-              <h3 className="text-xl font-bold text-text-primary">Hi, I'm {person.name}.</h3>
-              <p className="text-sm text-text-secondary leading-relaxed">
-                {person.description || `I'm here to help you with ${person.role} in ${world.name}.`}
-              </p>
-            </div>
-            <div className="w-full space-y-2">
-              <p className="text-[11px] text-text-muted uppercase tracking-wider font-semibold">Conversation starters</p>
-              <div className="flex flex-col gap-2">
-                {starterPrompts.map((prompt, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleSendMessage(prompt)}
-                    className="p-3 rounded-2xl cosmos-card cosmos-card-interactive text-left text-xs text-text-secondary hover:text-text-primary flex items-center justify-between gap-2"
-                  >
-                    <span className="line-clamp-2 flex-1">{prompt}</span>
-                    <Sparkles className="w-3.5 h-3.5 shrink-0 text-[#7c9bf7] opacity-60" />
-                  </button>
-                ))}
-              </div>
-            </div>
+            <div className="dot-pulse mt-2"><span /><span /><span /></div>
+            <p className="text-[11px] text-text-dim">Starting conversation...</p>
           </div>
         ) : (
           messages.map((msg) => {
             const isUser = msg.role === 'user';
+            // Hide internal system trigger messages
+            if (isUser && msg.content.startsWith('[SYSTEM:')) return null;
             return (
               <div
                 key={msg.id}

@@ -5,6 +5,7 @@ import { ActiveAgentsOverview } from '../features/dashboard/components/ActiveAge
 import { RunningTasksStream } from '../features/dashboard/components/RunningTasksStream';
 import { ActivityTimeline } from '../features/dashboard/components/ActivityTimeline';
 import { SystemMetricsBar } from '../features/dashboard/components/SystemMetricsBar';
+import { PeopleInitiatives } from '../features/dashboard/components/PeopleInitiatives';
 import { CreateWorldModal } from '../features/worlds/components/CreateWorldModal';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { worldService } from '../services/worldService';
@@ -73,8 +74,14 @@ export const DashboardPage: React.FC = () => {
         <RunningTasksStream tasks={tasks} />
       </div>
 
+      {/* ── People Initiatives ── People proactively reach out */}
+      {people.length > 0 && (
+        <PeopleInitiatives people={people} worlds={worlds} />
+      )}
+
       {/* Natural Activity Feed */}
       <ActivityTimeline activities={activities} title="Recent Activity Across Worlds" />
+
 
       {/* Creation Modal */}
       <CreateWorldModal
