@@ -24,12 +24,10 @@ interface PeopleInitiativesProps {
   worlds: World[];
 }
 
-// Generate a natural initiative prompt (system-side, not shown to user)
-function buildInitiativeTrigger(person: Person, world: World | null): string {
-  const role = person.role || 'person';
-  const worldName = world?.name || 'this world';
-  const resp = person.responsibilities?.slice(0, 2).join(' and ') || '';
-  return `[SYSTEM: You are ${person.name}, a real ${role} in ${worldName}. Send a short, natural message to the user like you're reaching out on chat. Something relevant to your role${resp ? ` (especially around ${resp})` : ''}. It should feel like a real person checking in, flagging something, or asking for input. 1-2 sentences max. NO greetings. NO "Hey!" or "Hi there!". Just talk like you normally would.]`;
+// Generate realistic role-based check-in prompts without synthetic system tags
+function getInitiativeUserPrompt(person: Person): string {
+  const resp = person.responsibilities?.[0]?.toLowerCase() || 'projects';
+  return `How are things going with your ${resp} today?`;
 }
 
 export const PeopleInitiatives: React.FC<PeopleInitiativesProps> = ({ people, worlds }) => {
@@ -45,10 +43,8 @@ export const PeopleInitiatives: React.FC<PeopleInitiativesProps> = ({ people, wo
   const loadInitiatives = useCallback(async (personsToLoad: Person[]) => {
     if (personsToLoad.length === 0) return;
 
-    // Pick up to 3 people who haven't chatted recently (or random selection)
     const selected = personsToLoad.slice(0, 3);
 
-    // Initialise with loading state
     setInitiatives(
       selected.map((p) => ({
         person: p,
@@ -59,13 +55,13 @@ export const PeopleInitiatives: React.FC<PeopleInitiativesProps> = ({ people, wo
       })),
     );
 
-    // Stream each initiative
     for (const p of selected) {
       const world = worldMap[p.worldId] || null;
+      const promptText = getInitiativeUserPrompt(p);
       const triggerMsg: ChatMessage = {
         id: `initiative-trigger-${p.id}-${Date.now()}`,
         role: 'user',
-        content: buildInitiativeTrigger(p, world),
+        content: promptText,
         timestamp: new Date().toISOString(),
       };
 
@@ -105,7 +101,6 @@ export const PeopleInitiatives: React.FC<PeopleInitiativesProps> = ({ people, wo
     if (people.length > 0) {
       loadInitiatives(people);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [people.length]);
 
   const handleRefresh = async () => {
@@ -121,16 +116,16 @@ export const PeopleInitiatives: React.FC<PeopleInitiativesProps> = ({ people, wo
   if (visibleInitiatives.length === 0 && !isRefreshing) return null;
 
   return (
-    <Card className="font-sans">
+    <Card className="font-sans bg-white border border-slate-200/80 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="flex items-center gap-2">
-          <MessageCircle className="w-4 h-4 text-[#7c9bf7]" />
-          <CardTitle className="text-sm font-bold">People Want to Talk</CardTitle>
+          <MessageCircle className="w-4 h-4 text-[#007aff]" />
+          <CardTitle className="text-sm font-bold text-slate-900">People Want to Talk</CardTitle>
         </div>
         <button
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="cosmos-btn-icon w-7 h-7 rounded-lg"
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
           title="Refresh"
         >
           <RefreshCw className={cn('w-3.5 h-3.5', isRefreshing && 'animate-spin')} />
@@ -148,9 +143,8 @@ export const PeopleInitiatives: React.FC<PeopleInitiativesProps> = ({ people, wo
             <Link
               key={person.id}
               to={chatUrl}
-              className="flex items-start gap-3 p-3 rounded-2xl cosmos-card cosmos-card-interactive group"
+              className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/60 transition-all group"
             >
-              {/* Avatar */}
               <div className="shrink-0 pt-0.5">
                 <Avatar
                   name={person.name}
@@ -160,26 +154,24 @@ export const PeopleInitiatives: React.FC<PeopleInitiativesProps> = ({ people, wo
                 />
               </div>
 
-              {/* Message */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2 mb-0.5">
-                  <span className="text-xs font-bold text-text-primary group-hover:text-[#a5bef9] transition-colors">
+                  <span className="text-xs font-bold text-slate-900 group-hover:text-[#007aff] transition-colors">
                     {person.name}
                   </span>
-                  <span className="text-[10px] text-text-dim truncate">{person.role}</span>
+                  <span className="text-[10px] text-slate-400 truncate">{person.role}</span>
                 </div>
 
                 {isLoading ? (
                   <div className="dot-pulse mt-1"><span /><span /><span /></div>
                 ) : (
-                  <p className="text-xs text-text-secondary leading-relaxed line-clamp-2">
+                  <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
                     {message}
                   </p>
                 )}
               </div>
 
-              {/* Arrow */}
-              <ChevronRight className="w-3.5 h-3.5 text-text-dim shrink-0 mt-0.5 group-hover:text-[#7c9bf7] transition-colors" />
+              <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5 group-hover:text-[#007aff] transition-colors" />
             </Link>
           );
         })}

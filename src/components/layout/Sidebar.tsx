@@ -25,24 +25,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onCreat
   return (
     <aside
       className={cn(
-        'hidden md:flex flex-col fixed top-0 bottom-0 left-0 z-30 cosmos-surface transition-all duration-300 ease-in-out select-none',
+        'hidden md:flex flex-col fixed top-0 bottom-0 left-0 z-30 bg-white border-r border-slate-200/80 transition-all duration-300 ease-in-out select-none shadow-sm shadow-slate-200/50',
         isCollapsed ? 'w-[72px]' : 'w-60',
       )}
     >
       {/* Brand Header */}
       <div className={cn(
-        'h-[60px] flex items-center justify-between px-4 border-b border-border',
+        'h-[60px] flex items-center justify-between px-4 border-b border-slate-100',
         isCollapsed && 'justify-center px-3',
       )}>
         <NavLink to="/" className="flex items-center gap-2.5 overflow-hidden min-w-0">
-          {/* Logo */}
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#7c9bf7] to-[#7c4af7] flex items-center justify-center shrink-0 shadow-cosmos-glow-sm">
+          <div className="w-8 h-8 rounded-xl bg-[#007aff] flex items-center justify-center shrink-0 shadow-md shadow-[#007aff]/20">
             <span className="text-white font-bold text-sm">P</span>
           </div>
           {!isCollapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="font-bold text-sm text-text-primary tracking-tight truncate">Parallel</span>
-              <span className="text-[10px] text-text-muted truncate">Your worlds & people</span>
+              <span className="font-bold text-sm text-slate-900 tracking-tight truncate">Parallel</span>
+              <span className="text-[10px] text-slate-400 truncate">Your worlds & people</span>
             </div>
           )}
         </NavLink>
@@ -50,7 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onCreat
         {!isCollapsed && (
           <button
             onClick={onToggle}
-            className="cosmos-btn-icon w-7 h-7 shrink-0"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
             title="Collapse"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
@@ -64,7 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onCreat
           {isCollapsed ? (
             <button
               onClick={onCreateWorldClick}
-              className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#7c9bf7] to-[#7c4af7] flex items-center justify-center shadow-cosmos-glow-sm hover:opacity-90 transition-opacity active:scale-95"
+              className="w-10 h-10 rounded-xl bg-[#007aff] flex items-center justify-center shadow-md shadow-[#007aff]/20 hover:bg-[#0066d6] transition-colors active:scale-95 cursor-pointer"
               title="Create a World"
             >
               <Plus className="w-4 h-4 text-white" />
@@ -72,7 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onCreat
           ) : (
             <button
               onClick={onCreateWorldClick}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#4a6cf7] to-[#7c4af7] text-white text-xs font-semibold shadow-cosmos-glow-sm hover:opacity-90 transition-opacity active:scale-[0.97]"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-[#007aff] text-white text-xs font-semibold shadow-md shadow-[#007aff]/20 hover:bg-[#0066d6] transition-colors active:scale-[0.97] cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               Create a World
@@ -82,7 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onCreat
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto">
         {siteConfig.mainNav.map((item) => (
           <NavLink
             key={item.href}
@@ -90,39 +89,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, onCreat
             end={item.exact}
             className={({ isActive }) =>
               cn(
-                'cosmos-nav-item',
-                isActive && 'active',
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150',
+                isActive
+                  ? 'bg-[#007aff]/10 text-[#007aff]'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80',
                 isCollapsed && 'justify-center px-2',
               )
             }
             title={isCollapsed ? item.title : undefined}
           >
             {getIcon(item.iconName)}
-            {!isCollapsed && <span className="truncate">{item.title}</span>}
+            {!isCollapsed && <span>{item.title}</span>}
           </NavLink>
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className={cn('p-3 border-t border-border', isCollapsed && 'flex justify-center')}>
-        {isCollapsed ? (
+      {/* Collapsed expand button */}
+      {isCollapsed && (
+        <div className="p-3 border-t border-slate-100 flex justify-center">
           <button
             onClick={onToggle}
-            className="cosmos-btn-icon w-8 h-8"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
             title="Expand Sidebar"
           >
-            <ChevronRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse-soft" />
-              Worlds active
-            </div>
-            <span className="text-[10px] text-text-dim">v0.1</span>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </aside>
   );
 };

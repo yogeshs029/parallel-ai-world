@@ -36,14 +36,14 @@ export const Header: React.FC<HeaderProps> = ({ onSearchOpen, onCreateWorldClick
   }, []);
 
   return (
-    <header className="sticky top-0 z-20 h-[60px] cosmos-surface border-b border-border px-4 sm:px-6 flex items-center justify-between gap-3">
+    <header className="sticky top-0 z-20 h-[60px] bg-white/90 backdrop-blur-md border-b border-black/[0.06] px-4 sm:px-6 flex items-center justify-between gap-3 shadow-sm shadow-black/[0.02]">
       {/* Mobile Logo */}
       <div className="flex items-center gap-2.5 md:hidden shrink-0">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#7c9bf7] to-[#7c4af7] flex items-center justify-center shadow-cosmos-glow-sm">
+          <div className="w-8 h-8 rounded-xl bg-[#007aff] flex items-center justify-center shadow-md shadow-[#007aff]/20">
             <span className="font-bold text-white text-sm">P</span>
           </div>
-          <span className="font-bold text-sm text-text-primary tracking-tight">Parallel</span>
+          <span className="font-bold text-sm text-slate-900 tracking-tight">Parallel</span>
         </Link>
       </div>
 
@@ -51,12 +51,11 @@ export const Header: React.FC<HeaderProps> = ({ onSearchOpen, onCreateWorldClick
       <div className="hidden md:flex flex-1 max-w-sm">
         <button
           onClick={onSearchOpen}
-          className="w-full flex items-center gap-2.5 px-3.5 py-2 cosmos-input text-left cursor-pointer hover:border-border-focus transition-all group"
-          style={{ background: 'rgba(15,22,38,0.5)' }}
+          className="w-full flex items-center gap-2.5 px-3.5 py-2 bg-slate-100/80 border border-slate-200/80 rounded-xl text-left cursor-pointer hover:bg-slate-100 transition-all group"
         >
-          <Search className="w-3.5 h-3.5 text-text-muted shrink-0 group-hover:text-[#7c9bf7] transition-colors" />
-          <span className="text-xs text-text-dim flex-1">Search worlds, people...</span>
-          <kbd className="hidden sm:flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono bg-background-deep border border-border rounded text-text-dim">
+          <Search className="w-3.5 h-3.5 text-slate-400 shrink-0 group-hover:text-[#007aff] transition-colors" />
+          <span className="text-xs text-slate-400 flex-1">Search worlds, people...</span>
+          <kbd className="hidden sm:flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-200 rounded text-slate-400 shadow-2xs">
             ⌘K
           </kbd>
         </button>
@@ -72,95 +71,79 @@ export const Header: React.FC<HeaderProps> = ({ onSearchOpen, onCreateWorldClick
               setIsWorldMenuOpen(!isWorldMenuOpen);
             }}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer border',
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border',
               isWorldMenuOpen
-                ? 'bg-[#7c9bf7]/15 border-[#7c9bf7]/30 text-[#a5bef9]'
-                : 'bg-background-elevated border-border text-text-secondary hover:text-text-primary hover:border-border-accent',
+                ? 'bg-[#007aff]/10 border-[#007aff]/30 text-[#007aff]'
+                : 'bg-slate-100/80 border-slate-200/80 text-slate-700 hover:text-slate-900 hover:bg-slate-100',
             )}
           >
             <span>My Worlds</span>
-            <ChevronDown className={cn('w-3.5 h-3.5 text-text-muted transition-transform', isWorldMenuOpen && 'rotate-180')} />
+            <ChevronDown className={cn('w-3.5 h-3.5 text-slate-400 transition-transform', isWorldMenuOpen && 'rotate-180')} />
           </button>
 
           {isWorldMenuOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setIsWorldMenuOpen(false)} />
-              <div className="absolute right-0 mt-2 w-60 cosmos-card rounded-2xl shadow-cosmos-lg p-2 z-50 animate-fade-up">
-                <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase text-text-dim border-b border-border flex justify-between items-center mb-1">
+              <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl border border-slate-200/80 shadow-lg p-2 z-50 animate-fade-up">
+                <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 flex justify-between items-center mb-1">
                   <span>Switch World</span>
                   <Link
                     to="/worlds"
                     onClick={() => setIsWorldMenuOpen(false)}
-                    className="text-[#7c9bf7] hover:text-[#a5bef9] font-medium normal-case text-xs transition-colors"
+                    className="text-[#007aff] hover:underline font-semibold normal-case text-xs transition-colors"
                   >
                     View All
                   </Link>
                 </div>
                 <div className="py-0.5 space-y-0.5">
                   {recentWorlds.length === 0 && (
-                    <p className="text-center text-xs text-text-dim py-3">No worlds yet</p>
+                    <div className="p-3 text-center text-xs text-slate-400">No recent worlds</div>
                   )}
-                  {recentWorlds.map((w) => (
+                  {recentWorlds.map((world) => (
                     <button
-                      key={w.id}
-                      onClick={() => { setIsWorldMenuOpen(false); navigate(`/world/${w.id}`); }}
-                      className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-background-elevated text-left transition-all cursor-pointer group"
+                      key={world.id}
+                      onClick={() => {
+                        setIsWorldMenuOpen(false);
+                        navigate(`/world/${world.id}`);
+                      }}
+                      className="w-full flex items-center gap-2.5 p-2 rounded-xl text-left hover:bg-slate-100/80 transition-colors group cursor-pointer"
                     >
-                      <span className="text-lg shrink-0">{w.icon || w.emoji || '🌍'}</span>
-                      <div className="truncate">
-                        <div className="text-xs font-semibold text-text-primary group-hover:text-[#a5bef9] truncate transition-colors">
-                          {w.name}
+                      <Avatar name={world.name} emoji={world.icon || '🌍'} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold text-slate-800 truncate group-hover:text-[#007aff]">
+                          {world.name}
                         </div>
-                        <div className="text-[10px] text-text-dim">
-                          {(w.memberCount ?? w.peopleCount ?? 0)} people
-                        </div>
+                        <div className="text-[10px] text-slate-400 truncate capitalize">{world.type}</div>
                       </div>
                     </button>
                   ))}
                 </div>
-                {onCreateWorldClick && (
-                  <div className="pt-1.5 border-t border-border mt-1.5">
-                    <button
-                      onClick={() => { setIsWorldMenuOpen(false); onCreateWorldClick(); }}
-                      className="w-full text-center py-2 text-xs text-[#7c9bf7] hover:bg-[#7c9bf7]/10 rounded-xl font-medium transition-all cursor-pointer"
-                    >
-                      + Create a World
-                    </button>
-                  </div>
-                )}
               </div>
             </>
           )}
         </div>
 
-        {/* Notification Bell */}
+        {/* Quick Action: Create World */}
+        <button
+          onClick={onCreateWorldClick}
+          className="cosmos-btn cosmos-btn-primary text-xs px-3 py-1.5 gap-1 rounded-xl shadow-sm cursor-pointer"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Create World</span>
+        </button>
+
+        {/* Notifications */}
         <Link
-          to="/notifications"
-          className="relative w-9 h-9 cosmos-btn-icon flex items-center justify-center rounded-xl"
+          to="/activity"
+          className="relative w-8 h-8 rounded-xl bg-slate-100/80 hover:bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-600 transition-colors cursor-pointer"
           title="Notifications"
         >
           <Bell className="w-4 h-4" />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-[#7c9bf7] text-white text-[9px] font-bold flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#007aff] text-white text-[9px] font-bold flex items-center justify-center border-2 border-white">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
-        </Link>
-
-        {/* Create World CTA */}
-        {onCreateWorldClick && (
-          <button
-            onClick={onCreateWorldClick}
-            className="hidden sm:flex cosmos-btn cosmos-btn-primary gap-1.5 px-3 py-2 text-xs"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Create World</span>
-          </button>
-        )}
-
-        {/* User Avatar */}
-        <Link to="/settings" className="shrink-0">
-          <Avatar name="You" isUser size="sm" status="working" />
         </Link>
       </div>
     </header>

@@ -9,20 +9,20 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 export const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ className, isInteractive = false, variant = 'default', children, ...props }, ref) => {
     const variants = {
-      default:  'cosmos-card',
-      elevated: 'cosmos-card bg-[rgba(28,38,60,0.92)]',
-      glass:    'bg-white/[0.04] backdrop-blur-2xl border border-white/10 rounded-[20px] shadow-cosmos-sm',
-      cosmic:   'cosmos-card bg-gradient-to-b from-[rgba(26,36,64,0.9)] to-[rgba(16,24,48,0.85)]',
-      subtle:   'bg-[rgba(14,20,36,0.5)] backdrop-blur-md border border-white/06 rounded-[20px]',
+      default:  'bg-white border border-slate-200/80 shadow-sm shadow-slate-200/50',
+      elevated: 'bg-white border border-slate-200 shadow-md shadow-slate-200/60',
+      glass:    'bg-white/80 backdrop-blur-md border border-slate-200/80 shadow-sm',
+      cosmic:   'bg-white border border-slate-200/80 shadow-sm',
+      subtle:   'bg-slate-50/80 border border-slate-200/60',
     };
 
     return (
       <div
         ref={ref}
         className={cn(
-          'rounded-[20px] transition-all duration-200 relative overflow-hidden',
+          'rounded-[18px] transition-all duration-200 relative overflow-hidden',
           variants[variant],
-          isInteractive && 'cosmos-card-interactive',
+          isInteractive && 'hover:border-[#007aff]/30 hover:shadow-md hover:-translate-y-0.5 cursor-pointer active:scale-[0.985]',
           className,
         )}
         {...props}
@@ -47,7 +47,7 @@ export const CardTitle = forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTM
   ({ className, children, ...props }, ref) => (
     <h3
       ref={ref}
-      className={cn('text-sm font-bold text-text-primary tracking-tight', className)}
+      className={cn('text-sm font-bold text-slate-900 tracking-tight', className)}
       {...props}
     >
       {children}
@@ -58,7 +58,7 @@ CardTitle.displayName = 'CardTitle';
 
 export const CardDescription = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
   ({ className, children, ...props }, ref) => (
-    <p ref={ref} className={cn('text-xs text-text-secondary leading-relaxed', className)} {...props}>
+    <p ref={ref} className={cn('text-xs text-slate-600 leading-relaxed', className)} {...props}>
       {children}
     </p>
   ),
@@ -78,7 +78,7 @@ export const CardFooter = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDi
   ({ className, children, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('flex items-center p-4 pt-0 border-t border-white/08 mt-2', className)}
+      className={cn('flex items-center p-4 pt-0 border-t border-slate-100 mt-2', className)}
       {...props}
     >
       {children}

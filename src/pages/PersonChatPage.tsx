@@ -115,7 +115,7 @@ export const PersonChatPage: React.FC = () => {
 
       if (history.length === 0 && !hasAutoInitiatedRef.current) {
         hasAutoInitiatedRef.current = true;
-        setTimeout(() => triggerPersonOpening(w!, p!), 700);
+        setTimeout(() => triggerPersonOpening(w!, p!), 600);
       }
 
       const health = await conversationService.checkLLMHealth();
@@ -132,6 +132,7 @@ export const PersonChatPage: React.FC = () => {
     }
   }, [worldId, personId]);
 
+  // Clean, realistic opening conversation prompt without synthetic system directives
   const triggerPersonOpening = useCallback(async (w: World, p: Person) => {
     if (!p || !w) return;
     const assistantMsgId = `asst-open-${Date.now()}`;
@@ -144,11 +145,10 @@ export const PersonChatPage: React.FC = () => {
     setMessages([openingMsg]);
     setIsStreaming(true);
 
-    // The trigger is a *system* message so the model treats it as instruction, not a user question
-    const systemTrigger: ChatMessage = {
-      id: `sys-trigger-${Date.now()}`,
-      role: 'system' as const,
-      content: `OPEN_CHAT_DIRECTIVE: You are ${p.name}, a ${p.role}. The user just opened your chat. Send ONE short, natural message — as if you're checking in mid-day. Something related to your work or life in ${w.name}. Do NOT greet. Do NOT introduce yourself. Do NOT say "How can I help". Just say something real and brief — like a text from someone who knows you. Max 2 sentences.`,
+    const userPing: ChatMessage = {
+      id: `ping-${Date.now()}`,
+      role: 'user',
+      content: `Hey ${p.name}, what's on your mind today?`,
       timestamp: new Date().toISOString(),
     };
 
@@ -157,7 +157,7 @@ export const PersonChatPage: React.FC = () => {
       await conversationService.streamChat(
         w,
         p,
-        [systemTrigger],
+        [userPing],
         (token) => {
           content += token;
           setMessages([{ ...openingMsg, content }]);
@@ -228,15 +228,10 @@ export const PersonChatPage: React.FC = () => {
     let sentenceBuffer = '';
 
     try {
-      // Filter out system trigger messages before sending conversation history
-      const historyToSend = messages.filter(
-        (m) => !(m.role === 'system') && !m.content.startsWith('OPEN_CHAT_DIRECTIVE:')
-      );
-
       await conversationService.streamChat(
         world,
         person,
-        [...historyToSend, userMsg],
+        [...messages, userMsg],
         async (token) => {
           accumulatedContent += token;
           sentenceBuffer += token;
@@ -363,7 +358,7 @@ export const PersonChatPage: React.FC = () => {
   if (!world || !person) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center gap-4">
-        <h2 className="text-lg font-semibold text-text-primary">Person not found</h2>
+        <h2 className="text-lg font-semibold text-slate-800">Person not found</h2>
         <Link to="/worlds">
           <Button variant="primary" size="md" leftIcon={ArrowLeft}>Back to Worlds</Button>
         </Link>
@@ -380,14 +375,9 @@ export const PersonChatPage: React.FC = () => {
     ? 'Listening...'
     : 'Active now';
 
-  // Visible messages — hide system trigger
-  const visibleMessages = messages.filter(
-    (m) => !(m.role === 'system') && !m.content.startsWith('OPEN_CHAT_DIRECTIVE:')
-  );
-
   return (
     <div className="chat-shell">
-      {/* ── iOS-style Header ── */}
+      {/* ── iOS Header ── */}
       <div className="chat-header">
         <Link
           to={`/world/${world.id}/people/${person.id}`}
@@ -409,8 +399,8 @@ export const PersonChatPage: React.FC = () => {
           <div className="chat-header-info">
             <span className="chat-header-name">{person.name}</span>
             <span className={cn(
-              'chat-header-status',
-              isStreaming || presenceState === 'speaking' ? 'text-[#34c759]' : 'text-text-dim'
+              'chat-header-status font-medium',
+              isStreaming || presenceState === 'speaking' ? 'text-[#34c759]' : 'text-slate-400'
             )}>
               {statusLabel}
             </span>
@@ -440,7 +430,7 @@ export const PersonChatPage: React.FC = () => {
         <div className="chat-error-banner">
           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
           <span className="flex-1 text-xs">{errorBanner}</span>
-          <button onClick={loadData} className="flex items-center gap-1 text-amber-300 font-semibold text-xs">
+          <button onClick={loadData} className="flex items-center gap-1 font-semibold text-xs text-amber-700">
             <RefreshCw className="w-3 h-3" /> Retry
           </button>
         </div>
@@ -448,26 +438,24 @@ export const PersonChatPage: React.FC = () => {
 
       {/* ── Messages ── */}
       <div className="chat-messages">
-        {visibleMessages.length === 0 ? (
+        {messages.length === 0 ? (
           <div className="chat-empty-state">
             <Avatar name={person.name} emoji={personEmoji} size="lg" />
-            <p className="text-sm font-semibold text-text-primary mt-3">{person.name}</p>
-            <p className="text-xs text-text-dim">{person.role}</p>
+            <p className="text-sm font-semibold text-slate-800 mt-3">{person.name}</p>
+            <p className="text-xs text-slate-400">{person.role}</p>
             <div className="dot-pulse mt-4"><span /><span /><span /></div>
           </div>
         ) : (
-          visibleMessages.map((msg, idx) => {
+          messages.map((msg, idx) => {
             const isUser = msg.role === 'user';
-            const isLastAI = !isUser && idx === visibleMessages.length - 1;
-            // Show avatar only on last consecutive AI message
-            const showAvatar = !isUser && (idx === visibleMessages.length - 1 || visibleMessages[idx + 1]?.role === 'user');
+            const isLastAI = !isUser && idx === messages.length - 1;
+            const showAvatar = !isUser && (idx === messages.length - 1 || messages[idx + 1]?.role === 'user');
 
             return (
               <div
                 key={msg.id}
                 className={cn('chat-row', isUser ? 'chat-row-user' : 'chat-row-ai')}
               >
-                {/* AI avatar spacer */}
                 {!isUser && (
                   <div className="w-7 shrink-0 self-end mb-0.5">
                     {showAvatar && (
@@ -510,31 +498,30 @@ export const PersonChatPage: React.FC = () => {
       <div className="chat-input-area">
         {isRecording && (
           <div className="chat-recording-banner">
-            <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse shrink-0" />
-            <span className="text-xs font-medium text-red-300 flex-1">Listening...</span>
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+            <span className="text-xs font-medium text-red-600 flex-1">Listening...</span>
             <div className="flex items-center gap-0.5">
               {[6, 12, 8].map((base, i) => (
                 <span
                   key={i}
-                  className="w-0.5 bg-red-400 rounded-full transition-all duration-75"
+                  className="w-0.5 bg-red-500 rounded-full transition-all duration-75"
                   style={{ height: `${base + audioLevel * 16}px` }}
                 />
               ))}
             </div>
-            <button onClick={handleToggleMicrophone} className="text-xs text-red-300 font-semibold ml-1">
+            <button onClick={handleToggleMicrophone} className="text-xs text-red-600 font-semibold ml-1">
               Done
             </button>
           </div>
         )}
 
         <div className="chat-input-row">
-          {/* Mic */}
           <button
             onClick={handleToggleMicrophone}
             disabled={isStreaming || isTranscribing}
             className={cn(
               'chat-input-icon-btn',
-              isRecording ? 'text-red-400' : 'text-text-dim hover:text-text-secondary'
+              isRecording ? 'text-red-500' : 'text-slate-400 hover:text-slate-700'
             )}
             title={isRecording ? 'Stop' : 'Voice input'}
           >
@@ -547,7 +534,6 @@ export const PersonChatPage: React.FC = () => {
             )}
           </button>
 
-          {/* Text input */}
           <textarea
             ref={textareaRef}
             rows={1}
@@ -560,7 +546,6 @@ export const PersonChatPage: React.FC = () => {
             autoFocus
           />
 
-          {/* Send / Stop */}
           {isStreaming ? (
             <button
               onClick={handleStopStreaming}
@@ -585,7 +570,7 @@ export const PersonChatPage: React.FC = () => {
           <span className="flex items-center gap-1.5">
             <span className={cn(
               'w-1.5 h-1.5 rounded-full',
-              isLLMOnline ? 'bg-[#34c759]' : 'bg-amber-400'
+              isLLMOnline ? 'bg-[#34c759]' : 'bg-amber-500'
             )} />
             <span>{isLLMOnline ? 'Connected' : 'Offline'}</span>
           </span>
@@ -593,7 +578,6 @@ export const PersonChatPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Modals */}
       <ConfigureVoiceModal
         isOpen={voiceSettingsDisclosure.isOpen}
         onClose={voiceSettingsDisclosure.onClose}

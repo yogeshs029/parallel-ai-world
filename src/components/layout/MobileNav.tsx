@@ -27,9 +27,8 @@ export const MobileNav: React.FC<MobileNavProps> = ({ onCreateWorldClick }) => {
   const half2 = navItems.slice(2);
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 cosmos-bottom-nav pb-safe select-none">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-200/80 pb-safe select-none shadow-lg shadow-black/5">
       <div className="flex items-center justify-around h-[62px] max-w-lg mx-auto px-2">
-        {/* First two items */}
         {half1.map((item) => (
           <NavLink
             key={item.href}
@@ -37,25 +36,22 @@ export const MobileNav: React.FC<MobileNavProps> = ({ onCreateWorldClick }) => {
             end={item.exact}
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center flex-1 h-full pt-2 gap-1 transition-all duration-200 relative',
-                isActive ? 'text-[#7c9bf7]' : 'text-text-muted',
+                'flex flex-col items-center justify-center flex-1 h-full pt-1 gap-0.5 transition-all duration-200 relative',
+                isActive ? 'text-[#007aff]' : 'text-slate-400',
               )
             }
           >
             {({ isActive }) => (
               <>
-                {isActive && (
-                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-[#7c9bf7]" />
-                )}
                 <span className={cn(
                   'w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200',
-                  isActive ? 'bg-[#7c9bf7]/15' : 'bg-transparent',
+                  isActive ? 'bg-[#007aff]/10' : 'bg-transparent',
                 )}>
                   {getIcon(item.iconName, isActive)}
                 </span>
                 <span className={cn(
                   'text-[10px] font-medium transition-colors',
-                  isActive ? 'text-[#a5bef9]' : 'text-text-dim',
+                  isActive ? 'text-[#007aff]' : 'text-slate-400',
                 )}>
                   {item.title}
                 </span>
@@ -69,7 +65,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ onCreateWorldClick }) => {
           <div className="flex items-center justify-center px-3">
             <button
               onClick={onCreateWorldClick}
-              className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#7c9bf7] to-[#7c4af7] text-white flex items-center justify-center shadow-cosmos-glow transition-all duration-200 hover:opacity-90 active:scale-90"
+              className="w-11 h-11 rounded-2xl bg-[#007aff] text-white flex items-center justify-center shadow-md shadow-[#007aff]/30 transition-all duration-200 active:scale-90"
               aria-label="Create World"
             >
               <Plus className="w-5 h-5" />
@@ -77,7 +73,6 @@ export const MobileNav: React.FC<MobileNavProps> = ({ onCreateWorldClick }) => {
           </div>
         )}
 
-        {/* Last two items */}
         {half2.map((item) => (
           <NavLink
             key={item.href}
@@ -85,25 +80,22 @@ export const MobileNav: React.FC<MobileNavProps> = ({ onCreateWorldClick }) => {
             end={item.exact}
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center flex-1 h-full pt-2 gap-1 transition-all duration-200 relative',
-                isActive ? 'text-[#7c9bf7]' : 'text-text-muted',
+                'flex flex-col items-center justify-center flex-1 h-full pt-1 gap-0.5 transition-all duration-200 relative',
+                isActive ? 'text-[#007aff]' : 'text-slate-400',
               )
             }
           >
             {({ isActive }) => (
               <>
-                {isActive && (
-                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-[#7c9bf7]" />
-                )}
                 <span className={cn(
                   'w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200',
-                  isActive ? 'bg-[#7c9bf7]/15' : 'bg-transparent',
+                  isActive ? 'bg-[#007aff]/10' : 'bg-transparent',
                 )}>
                   {getIcon(item.iconName, isActive)}
                 </span>
                 <span className={cn(
                   'text-[10px] font-medium transition-colors',
-                  isActive ? 'text-[#a5bef9]' : 'text-text-dim',
+                  isActive ? 'text-[#007aff]' : 'text-slate-400',
                 )}>
                   {item.title}
                 </span>
