@@ -68,14 +68,10 @@ export const PersonChatPage: React.FC = () => {
     cancelRecording,
   } = useMicrophoneRecorder();
 
-  // Listen to audio queue playback state
   useEffect(() => {
     const unsubscribe = audioQueuePlayer.subscribe((isPlaying) => {
-      if (isPlaying) {
-        setPresenceState('speaking');
-      } else if (!isStreaming && !isRecording) {
-        setPresenceState('idle');
-      }
+      if (isPlaying) setPresenceState('speaking');
+      else if (!isStreaming && !isRecording) setPresenceState('idle');
     });
     return () => unsubscribe();
   }, [isStreaming, isRecording]);
@@ -117,33 +113,25 @@ export const PersonChatPage: React.FC = () => {
       }
       setMessages(history);
 
-      // If this is a fresh conversation, trigger a proactive opening from the person
       if (history.length === 0 && !hasAutoInitiatedRef.current) {
         hasAutoInitiatedRef.current = true;
-        // Small delay so UI is settled
-        setTimeout(() => {
-          triggerPersonOpening(w!, p!);
-        }, 600);
+        setTimeout(() => triggerPersonOpening(w!, p!), 700);
       }
 
-      // Check LLM health
       const health = await conversationService.checkLLMHealth();
       setIsLLMOnline(health.available);
       if (!health.available) {
-        setErrorBanner(
-          `${p?.name || 'Your person'} can't connect right now. Check that Ollama is running.`,
-        );
+        setErrorBanner(`${p?.name || 'Person'} can't connect right now.`);
       } else {
         setErrorBanner(null);
       }
     } catch (err) {
-      console.error('Failed to load chat data:', err);
+      console.error('Failed to load chat:', err);
     } finally {
       setIsLoading(false);
     }
   }, [worldId, personId]);
 
-  // Generate a natural proactive opening message from the person
   const triggerPersonOpening = useCallback(async (w: World, p: Person) => {
     if (!p || !w) return;
     const assistantMsgId = `asst-open-${Date.now()}`;
@@ -156,11 +144,11 @@ export const PersonChatPage: React.FC = () => {
     setMessages([openingMsg]);
     setIsStreaming(true);
 
-    // Build a hidden system trigger — NOT shown to user
-    const hiddenTrigger: ChatMessage = {
-      id: `trigger-${Date.now()}`,
-      role: 'user',
-      content: `[SYSTEM: Start the conversation naturally. Say something relevant to your role as ${p.role} in ${w.name}. Don't introduce yourself — they already know you. Keep it short and casual — like you're checking in, mentioning something you're working on, or asking about something relevant. NO greetings like "Hey!" or "Hi!" — just start talking like you normally would mid-day.]`,
+    // The trigger is a *system* message so the model treats it as instruction, not a user question
+    const systemTrigger: ChatMessage = {
+      id: `sys-trigger-${Date.now()}`,
+      role: 'system' as const,
+      content: `OPEN_CHAT_DIRECTIVE: You are ${p.name}, a ${p.role}. The user just opened your chat. Send ONE short, natural message — as if you're checking in mid-day. Something related to your work or life in ${w.name}. Do NOT greet. Do NOT introduce yourself. Do NOT say "How can I help". Just say something real and brief — like a text from someone who knows you. Max 2 sentences.`,
       timestamp: new Date().toISOString(),
     };
 
@@ -169,7 +157,7 @@ export const PersonChatPage: React.FC = () => {
       await conversationService.streamChat(
         w,
         p,
-        [hiddenTrigger],
+        [systemTrigger],
         (token) => {
           content += token;
           setMessages([{ ...openingMsg, content }]);
@@ -179,13 +167,11 @@ export const PersonChatPage: React.FC = () => {
       conversationService.saveMessages(p.id, [finalMsg]);
       setMessages([finalMsg]);
     } catch (e) {
-      // If opening fails, show an empty state without self-introduction
       setMessages([]);
     } finally {
       setIsStreaming(false);
     }
   }, []);
-
 
   useEffect(() => {
     loadData();
@@ -195,12 +181,8 @@ export const PersonChatPage: React.FC = () => {
     };
   }, [loadData, cancelRecording]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isStreaming]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -215,14 +197,9 @@ export const PersonChatPage: React.FC = () => {
     const text = (textToSend || inputValue).trim();
     if (!text || isStreaming || !world || !person) return;
 
-    // Barge-in: stop any existing speech playback immediately
     audioQueuePlayer.stop();
-
-    // Reset input
     setInputValue('');
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -230,7 +207,6 @@ export const PersonChatPage: React.FC = () => {
       content: text,
       timestamp: new Date().toISOString(),
     };
-
     const assistantMsgId = `asst-${Date.now()}`;
     const initialAssistantMsg: ChatMessage = {
       id: assistantMsgId,
@@ -252,27 +228,29 @@ export const PersonChatPage: React.FC = () => {
     let sentenceBuffer = '';
 
     try {
+      // Filter out system trigger messages before sending conversation history
+      const historyToSend = messages.filter(
+        (m) => !(m.role === 'system') && !m.content.startsWith('OPEN_CHAT_DIRECTIVE:')
+      );
+
       await conversationService.streamChat(
         world,
         person,
-        [...messages, userMsg],
+        [...historyToSend, userMsg],
         async (token) => {
           accumulatedContent += token;
           sentenceBuffer += token;
-
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === assistantMsgId ? { ...msg, content: accumulatedContent } : msg,
             ),
           );
 
-          // Sentence-chunked auto-speech
           if (voiceProfile?.autoSpeak && !abortController.signal.aborted) {
             const boundaryMatch = sentenceBuffer.match(/([.!?]+[\s\n]+|[\n]{2,})/);
             if (boundaryMatch && sentenceBuffer.trim().length >= 15) {
               const sentenceToSpeak = sentenceBuffer.trim();
               sentenceBuffer = '';
-
               try {
                 const audioUrl = await voiceService.synthesize({
                   text: sentenceToSpeak,
@@ -280,19 +258,14 @@ export const PersonChatPage: React.FC = () => {
                   speed: voiceProfile.speakingRate,
                   pitch: voiceProfile.pitch,
                 });
-                if (audioUrl) {
-                  audioQueuePlayer.enqueue(audioUrl, sentenceToSpeak);
-                }
-              } catch (synthErr) {
-                console.warn('Sentence synthesis error:', synthErr);
-              }
+                if (audioUrl) audioQueuePlayer.enqueue(audioUrl, sentenceToSpeak);
+              } catch {}
             }
           }
         },
         abortController.signal,
       );
 
-      // Flush remaining sentence
       if (voiceProfile?.autoSpeak && sentenceBuffer.trim() && !abortController.signal.aborted) {
         try {
           const finalUrl = await voiceService.synthesize({
@@ -301,15 +274,10 @@ export const PersonChatPage: React.FC = () => {
             speed: voiceProfile.speakingRate,
             pitch: voiceProfile.pitch,
           });
-          if (finalUrl) {
-            audioQueuePlayer.enqueue(finalUrl, sentenceBuffer.trim());
-          }
-        } catch (e) {
-          console.warn('Final sentence synthesis error:', e);
-        }
+          if (finalUrl) audioQueuePlayer.enqueue(finalUrl, sentenceBuffer.trim());
+        } catch {}
       }
 
-      // Save complete conversation
       const finalMessages = [
         ...messages,
         userMsg,
@@ -318,21 +286,14 @@ export const PersonChatPage: React.FC = () => {
       conversationService.saveMessages(person.id, finalMessages);
       setMessages(finalMessages);
     } catch (err: unknown) {
-      console.error('Streaming error:', err);
       if (err instanceof Error && err.name === 'AbortError') {
-        // Handled as intentional cancellation
+        // intentional
       } else {
-        const errorMsg = `${person.name}'s intelligence is temporarily unavailable. Please try again.`;
-        setErrorBanner(errorMsg);
+        setErrorBanner(`Couldn't reach ${person.name}. Please try again.`);
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === assistantMsgId
-              ? {
-                  ...msg,
-                  content:
-                    accumulatedContent ||
-                    `I'm having a brief moment of pause. Please ask me again.`,
-                }
+              ? { ...msg, content: accumulatedContent || '...' }
               : msg,
           ),
         );
@@ -344,12 +305,9 @@ export const PersonChatPage: React.FC = () => {
   };
 
   const handleStopStreaming = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      setIsStreaming(false);
-      audioQueuePlayer.stop();
-      toast.info('Stopped generating', 'Response generation was cancelled.');
-    }
+    abortControllerRef.current?.abort();
+    setIsStreaming(false);
+    audioQueuePlayer.stop();
   };
 
   const handleStopSpeaking = () => {
@@ -358,15 +316,13 @@ export const PersonChatPage: React.FC = () => {
   };
 
   const handleToggleMicrophone = async () => {
-    // Interruption: stop assistant playback
     audioQueuePlayer.stop();
-
     if (isRecording) {
       setIsTranscribing(true);
       const blob = await stopRecording();
       if (blob) {
         const res = await voiceService.transcribeAudio(blob);
-        if (res && res.transcript.trim()) {
+        if (res?.transcript?.trim()) {
           setInputValue((prev) => (prev ? `${prev} ${res.transcript}` : res.transcript));
           if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
@@ -374,15 +330,13 @@ export const PersonChatPage: React.FC = () => {
             textareaRef.current.focus();
           }
         } else {
-          toast.info('No speech detected', 'Please try speaking a bit louder.');
+          toast.info('No speech detected', 'Try speaking louder.');
         }
       }
       setIsTranscribing(false);
     } else {
       const ok = await startRecording();
-      if (!ok && micError) {
-        toast.error('Microphone error', micError);
-      }
+      if (!ok && micError) toast.error('Microphone error', micError);
     }
   };
 
@@ -390,8 +344,11 @@ export const PersonChatPage: React.FC = () => {
     if (!person) return;
     audioQueuePlayer.stop();
     conversationService.clearMessages(person.id);
+    hasAutoInitiatedRef.current = false;
     setMessages([]);
-    toast.info('Conversation reset', `Started a fresh conversation with ${person.name}. Long-term memories are preserved.`);
+    setTimeout(() => {
+      if (world && person) triggerPersonOpening(world, person);
+    }, 400);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -401,174 +358,139 @@ export const PersonChatPage: React.FC = () => {
     }
   };
 
-  if (isLoading) {
-    return <LoadingState message="Connecting to person intelligence & voice..." />;
-  }
+  if (isLoading) return <LoadingState message="Opening chat..." />;
 
   if (!world || !person) {
     return (
-      <div className="min-h-[50vh] flex flex-col items-center justify-center text-center p-6 space-y-4 font-sans">
-        <h2 className="text-xl font-bold">Person Not Found</h2>
+      <div className="min-h-[50vh] flex flex-col items-center justify-center gap-4">
+        <h2 className="text-lg font-semibold text-text-primary">Person not found</h2>
         <Link to="/worlds">
-          <Button variant="primary" size="md" leftIcon={ArrowLeft}>
-            Return to Worlds
-          </Button>
+          <Button variant="primary" size="md" leftIcon={ArrowLeft}>Back to Worlds</Button>
         </Link>
       </div>
     );
   }
 
   const personEmoji = person.avatar?.emoji || person.avatarEmoji || '👤';
+  const statusLabel = presenceState === 'speaking'
+    ? 'Speaking...'
+    : isStreaming
+    ? 'Typing...'
+    : isRecording
+    ? 'Listening...'
+    : 'Active now';
 
-
+  // Visible messages — hide system trigger
+  const visibleMessages = messages.filter(
+    (m) => !(m.role === 'system') && !m.content.startsWith('OPEN_CHAT_DIRECTIVE:')
+  );
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-60px)] font-sans max-w-3xl mx-auto">
-      {/* ── Chat Header ── */}
-      <div className="flex items-center gap-3 px-3 py-2.5 cosmos-card mb-1 shrink-0">
-        {/* Back */}
+    <div className="chat-shell">
+      {/* ── iOS-style Header ── */}
+      <div className="chat-header">
         <Link
           to={`/world/${world.id}/people/${person.id}`}
-          className="cosmos-btn-icon w-8 h-8 shrink-0 rounded-xl"
-          title="Back to Profile"
+          className="chat-back-btn"
+          title="Back"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-5 h-5" />
         </Link>
 
-        {/* Avatar + Status ping */}
-        <div className="relative shrink-0">
-          <Avatar
-            name={person.name}
-            emoji={personEmoji}
-            size="md"
-            status={isStreaming ? 'working' : presenceState === 'speaking' ? 'working' : 'available'}
-          />
-          {presenceState === 'speaking' && (
-            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#7c9bf7] border-2 border-[#0d1117] animate-ping" />
-          )}
-        </div>
-
-        {/* Name + role */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-sm font-bold text-text-primary truncate">{person.name}</h2>
+        <div className="chat-header-person">
+          <div className="relative">
+            <Avatar
+              name={person.name}
+              emoji={personEmoji}
+              size="sm"
+              status={isStreaming ? 'working' : presenceState === 'speaking' ? 'working' : 'available'}
+            />
+          </div>
+          <div className="chat-header-info">
+            <span className="chat-header-name">{person.name}</span>
             <span className={cn(
-              'cosmos-chip text-[10px]',
-              presenceState === 'speaking' ? 'cosmos-chip-blue'
-              : isStreaming ? 'cosmos-chip-amber'
-              : isRecording ? 'cosmos-chip-red'
-              : 'cosmos-chip-green',
+              'chat-header-status',
+              isStreaming || presenceState === 'speaking' ? 'text-[#34c759]' : 'text-text-dim'
             )}>
-              <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
-              {presenceState === 'speaking' ? 'Speaking' : isStreaming ? 'Thinking' : isRecording ? 'Listening' : 'Online'}
+              {statusLabel}
             </span>
           </div>
-          <p className="text-[11px] text-text-muted truncate">{person.role}</p>
         </div>
 
-        {/* Action Pill Buttons - minimal on mobile */}
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="chat-header-actions">
           {presenceState === 'speaking' && (
-            <button
-              onClick={handleStopSpeaking}
-              className="cosmos-btn cosmos-btn-ghost text-[11px] px-2 py-1 h-auto gap-1 rounded-lg"
-            >
-              <Square className="w-3 h-3" /> Stop
+            <button onClick={handleStopSpeaking} className="chat-action-btn" title="Stop speaking">
+              <Square className="w-4 h-4 fill-current" />
             </button>
           )}
-          <button
-            onClick={voiceConversationDisclosure.onOpen}
-            title="Voice Mode"
-            className="w-8 h-8 cosmos-btn-icon rounded-xl text-[#a5bef9]"
-          >
+          <button onClick={voiceConversationDisclosure.onOpen} className="chat-action-btn" title="Voice call">
             <Radio className="w-4 h-4" />
           </button>
-          <button
-            onClick={memoryDisclosure.onOpen}
-            title="Memory"
-            className="hidden sm:flex w-8 h-8 cosmos-btn-icon rounded-xl"
-          >
+          <button onClick={memoryDisclosure.onOpen} className="chat-action-btn hidden sm:flex" title="Memories">
             <Brain className="w-4 h-4" />
           </button>
-          <button
-            onClick={handleResetConversation}
-            title="Reset Chat"
-            className="w-8 h-8 cosmos-btn-icon rounded-xl"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
+          <button onClick={handleResetConversation} className="chat-action-btn" title="New conversation">
+            <RotateCcw className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Alert Banner */}
+      {/* Error Banner */}
       {errorBanner && (
-        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-300 animate-fade-in shrink-0 mt-1">
+        <div className="chat-error-banner">
           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          <span className="flex-1">{errorBanner}</span>
-          <button
-            onClick={loadData}
-            className="flex items-center gap-1 text-amber-300 hover:text-amber-100 font-semibold transition-colors"
-          >
+          <span className="flex-1 text-xs">{errorBanner}</span>
+          <button onClick={loadData} className="flex items-center gap-1 text-amber-300 font-semibold text-xs">
             <RefreshCw className="w-3 h-3" /> Retry
           </button>
         </div>
       )}
 
       {/* ── Messages ── */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
-        {messages.length === 0 ? (
-          /* Conversation starting... spinner — shown only if proactive message is loading */
-          <div className="flex flex-col items-center justify-center min-h-[55vh] gap-4 animate-fade-in">
-            <Avatar name={person.name} emoji={personEmoji} size="xl" />
-            <div className="text-center space-y-1.5">
-              <p className="text-sm font-semibold text-text-primary">{person.name}</p>
-              <p className="text-xs text-text-muted">{person.role}</p>
-            </div>
-            <div className="dot-pulse mt-2"><span /><span /><span /></div>
-            <p className="text-[11px] text-text-dim">Starting conversation...</p>
+      <div className="chat-messages">
+        {visibleMessages.length === 0 ? (
+          <div className="chat-empty-state">
+            <Avatar name={person.name} emoji={personEmoji} size="lg" />
+            <p className="text-sm font-semibold text-text-primary mt-3">{person.name}</p>
+            <p className="text-xs text-text-dim">{person.role}</p>
+            <div className="dot-pulse mt-4"><span /><span /><span /></div>
           </div>
         ) : (
-          messages.map((msg) => {
+          visibleMessages.map((msg, idx) => {
             const isUser = msg.role === 'user';
-            // Hide internal system trigger messages
-            if (isUser && msg.content.startsWith('[SYSTEM:')) return null;
+            const isLastAI = !isUser && idx === visibleMessages.length - 1;
+            // Show avatar only on last consecutive AI message
+            const showAvatar = !isUser && (idx === visibleMessages.length - 1 || visibleMessages[idx + 1]?.role === 'user');
+
             return (
               <div
                 key={msg.id}
-                className={cn(
-                  'flex items-end gap-2.5 fade-up',
-                  isUser ? 'flex-row-reverse' : 'flex-row',
-                )}
+                className={cn('chat-row', isUser ? 'chat-row-user' : 'chat-row-ai')}
               >
-                {/* AI avatar — only for non-user */}
+                {/* AI avatar spacer */}
                 {!isUser && (
-                  <div className="shrink-0 mb-0.5">
-                    <Avatar name={person.name} emoji={personEmoji} size="sm" />
+                  <div className="w-7 shrink-0 self-end mb-0.5">
+                    {showAvatar && (
+                      <Avatar name={person.name} emoji={personEmoji} size="xs" />
+                    )}
                   </div>
                 )}
 
-                <div className={cn('space-y-1', isUser ? 'items-end' : 'items-start', 'flex flex-col max-w-[82%] sm:max-w-[72%]')}>
-                  {/* Bubble */}
+                <div className={cn('chat-bubble-wrap', isUser ? 'items-end' : 'items-start')}>
                   {isUser ? (
-                    <div className="bubble-user">
-                      <div className="whitespace-pre-wrap">{msg.content}</div>
-                    </div>
+                    <div className="imessage-bubble-user">{msg.content}</div>
                   ) : (
-                    <div className="bubble-ai">
+                    <div className="imessage-bubble-ai">
                       {msg.content ? (
-                        <div className="whitespace-pre-wrap">{msg.content}</div>
+                        <span className="whitespace-pre-wrap">{msg.content}</span>
                       ) : (
-                        /* Thinking dots */
-                        <div className="dot-pulse">
-                          <span /><span /><span />
-                        </div>
+                        <div className="dot-pulse"><span /><span /><span /></div>
                       )}
                     </div>
                   )}
 
-                  {/* Voice play button */}
-                  {!isUser && msg.content && (
-                    <div className="pl-1">
+                  {!isUser && msg.content && isLastAI && (
+                    <div className="mt-1 pl-1">
                       <VoicePlayerButton
                         text={msg.content}
                         voiceProfile={voiceProfile}
@@ -581,81 +503,69 @@ export const PersonChatPage: React.FC = () => {
             );
           })
         )}
-        <div ref={messagesEndRef} />
+        <div ref={messagesEndRef} className="h-2" />
       </div>
 
       {/* ── Input Bar ── */}
-      <div className="shrink-0 px-2 pb-3 pt-2 space-y-2">
-        {/* Mic recording banner */}
+      <div className="chat-input-area">
         {isRecording && (
-          <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-xs text-rose-300 animate-fade-in">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-400 animate-ping shrink-0" />
-            <span className="font-semibold flex-1">Listening...</span>
-            {/* waveform */}
+          <div className="chat-recording-banner">
+            <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse shrink-0" />
+            <span className="text-xs font-medium text-red-300 flex-1">Listening...</span>
             <div className="flex items-center gap-0.5">
-              {[8, 14, 10].map((base, i) => (
+              {[6, 12, 8].map((base, i) => (
                 <span
                   key={i}
-                  className="w-1 bg-rose-400 rounded-full transition-all"
-                  style={{ height: `${base + audioLevel * 18}px` }}
+                  className="w-0.5 bg-red-400 rounded-full transition-all duration-75"
+                  style={{ height: `${base + audioLevel * 16}px` }}
                 />
               ))}
             </div>
-            <button
-              onClick={handleToggleMicrophone}
-              className="font-semibold text-rose-300 hover:text-rose-100 transition-colors"
-            >
+            <button onClick={handleToggleMicrophone} className="text-xs text-red-300 font-semibold ml-1">
               Done
             </button>
           </div>
         )}
 
-        {/* Main input row */}
-        <div className="flex items-end gap-2 cosmos-card px-3 py-2.5">
-          {/* Textarea */}
+        <div className="chat-input-row">
+          {/* Mic */}
+          <button
+            onClick={handleToggleMicrophone}
+            disabled={isStreaming || isTranscribing}
+            className={cn(
+              'chat-input-icon-btn',
+              isRecording ? 'text-red-400' : 'text-text-dim hover:text-text-secondary'
+            )}
+            title={isRecording ? 'Stop' : 'Voice input'}
+          >
+            {isTranscribing ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : isRecording ? (
+              <Square className="w-4 h-4 fill-current" />
+            ) : (
+              <Mic className="w-5 h-5" />
+            )}
+          </button>
+
+          {/* Text input */}
           <textarea
             ref={textareaRef}
             rows={1}
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder={
-              isTranscribing
-                ? 'Converting speech to text...'
-                : `Message ${person.name}...`
-            }
+            placeholder={isTranscribing ? 'Converting...' : `Message ${person.name}`}
             disabled={isStreaming || isTranscribing}
-            className="flex-1 bg-transparent text-text-primary text-sm placeholder:text-text-dim focus:outline-none resize-none font-sans max-h-36 disabled:opacity-50 leading-relaxed py-1"
+            className="chat-textarea"
             autoFocus
           />
-
-          {/* Mic button */}
-          <button
-            onClick={handleToggleMicrophone}
-            disabled={isStreaming || isTranscribing}
-            title={isRecording ? 'Stop Recording' : 'Voice input'}
-            className={cn(
-              'w-9 h-9 rounded-xl flex items-center justify-center transition-all shrink-0 disabled:opacity-40',
-              isRecording
-                ? 'bg-rose-500 text-white animate-pulse'
-                : 'cosmos-btn-icon',
-            )}
-          >
-            {isTranscribing ? (
-              <Loader2 className="w-4 h-4 animate-spin text-[#7c9bf7]" />
-            ) : isRecording ? (
-              <Square className="w-3.5 h-3.5 fill-current" />
-            ) : (
-              <Mic className="w-4 h-4" />
-            )}
-          </button>
 
           {/* Send / Stop */}
           {isStreaming ? (
             <button
               onClick={handleStopStreaming}
-              className="w-9 h-9 rounded-xl flex items-center justify-center bg-rose-500/20 border border-rose-500/30 text-rose-300 hover:bg-rose-500/30 transition-all shrink-0"
-              title="Stop generating"
+              className="chat-send-btn chat-send-btn-stop"
+              title="Stop"
             >
               <Square className="w-3.5 h-3.5 fill-current" />
             </button>
@@ -663,7 +573,7 @@ export const PersonChatPage: React.FC = () => {
             <button
               onClick={() => handleSendMessage()}
               disabled={!inputValue.trim()}
-              className="cosmos-btn cosmos-btn-primary w-9 h-9 rounded-xl p-0 shrink-0 disabled:opacity-30 disabled:pointer-events-none"
+              className="chat-send-btn chat-send-btn-active"
               title="Send"
             >
               <Send className="w-4 h-4" />
@@ -671,17 +581,19 @@ export const PersonChatPage: React.FC = () => {
           )}
         </div>
 
-        {/* Footer hint */}
-        <div className="flex items-center justify-between text-[10px] text-text-dim px-1">
-          <span>Enter to send • Shift+Enter new line</span>
-          <span className="flex items-center gap-1">
-            <span className={cn('w-1.5 h-1.5 rounded-full', isLLMOnline ? 'bg-emerald-400' : 'bg-amber-400')} />
-            {isLLMOnline ? 'AI Online' : 'AI Offline'}
+        <div className="chat-input-footer">
+          <span className="flex items-center gap-1.5">
+            <span className={cn(
+              'w-1.5 h-1.5 rounded-full',
+              isLLMOnline ? 'bg-[#34c759]' : 'bg-amber-400'
+            )} />
+            <span>{isLLMOnline ? 'Connected' : 'Offline'}</span>
           </span>
+          <span>Enter to send</span>
         </div>
       </div>
 
-      {/* Voice Configuration Modal */}
+      {/* Modals */}
       <ConfigureVoiceModal
         isOpen={voiceSettingsDisclosure.isOpen}
         onClose={voiceSettingsDisclosure.onClose}
@@ -690,8 +602,6 @@ export const PersonChatPage: React.FC = () => {
         personName={person.name}
         onVoiceUpdated={(updated) => setVoiceProfile(updated)}
       />
-
-      {/* Immersive Voice Conversation Modal */}
       <VoiceConversationModal
         isOpen={voiceConversationDisclosure.isOpen}
         onClose={voiceConversationDisclosure.onClose}
@@ -699,16 +609,12 @@ export const PersonChatPage: React.FC = () => {
         person={person}
         voiceProfile={voiceProfile}
       />
-
-      {/* Configure Intelligence Modal */}
       <ConfigureIntelligenceModal
         isOpen={intelligenceDisclosure.isOpen}
         onClose={intelligenceDisclosure.onClose}
         person={person}
         onUpdated={(updated) => setPerson(updated)}
       />
-
-      {/* Memory Drawer */}
       <MemoryDrawer
         isOpen={memoryDisclosure.isOpen}
         onClose={memoryDisclosure.onClose}
@@ -718,4 +624,5 @@ export const PersonChatPage: React.FC = () => {
     </div>
   );
 };
+
 export default PersonChatPage;
