@@ -5,19 +5,15 @@ import {
   Send,
   Square,
   RotateCcw,
-  Sliders,
-  User,
   AlertCircle,
   Sparkles,
   RefreshCw,
   Brain,
   Mic,
-  Volume2,
   Radio,
   Loader2,
 } from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
-import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { LoadingState } from '../components/layout/LoadingState';
 import { ConfigureIntelligenceModal } from '../features/intelligence/components/ConfigureIntelligenceModal';
@@ -381,195 +377,125 @@ export const PersonChatPage: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-7rem)] font-sans max-w-5xl mx-auto">
-      {/* Top Chat Header */}
-      <div className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-background-surface border border-border shrink-0 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Link
-            to={`/world/${world.id}/people/${person.id}`}
-            className="p-1.5 rounded-xl hover:bg-background-elevated text-text-muted hover:text-text-primary transition-colors cursor-pointer"
-            title="Back to Profile"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
+    <div className="flex flex-col h-[calc(100dvh-60px)] font-sans max-w-3xl mx-auto">
+      {/* ── Chat Header ── */}
+      <div className="flex items-center gap-3 px-3 py-2.5 cosmos-card mb-1 shrink-0">
+        {/* Back */}
+        <Link
+          to={`/world/${world.id}/people/${person.id}`}
+          className="cosmos-btn-icon w-8 h-8 shrink-0 rounded-xl"
+          title="Back to Profile"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </Link>
 
-          <div className="relative">
-            <Avatar
-              name={person.name}
-              emoji={personEmoji}
-              size="md"
-              status={isStreaming ? 'working' : presenceState === 'speaking' ? 'working' : 'available'}
-            />
-            {presenceState === 'speaking' && (
-              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-brand-purple border-2 border-background-surface animate-ping" />
-            )}
-          </div>
-
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm sm:text-base font-bold text-text-primary">
-                {person.name}
-              </h2>
-              <Badge
-                variant={
-                  presenceState === 'speaking'
-                    ? 'completed'
-                    : isStreaming
-                    ? 'thinking'
-                    : isRecording
-                    ? 'warning'
-                    : 'available'
-                }
-                size="sm"
-                dot
-              >
-                {presenceState === 'speaking'
-                  ? 'Speaking...'
-                  : isStreaming
-                  ? 'Thinking...'
-                  : isRecording
-                  ? 'Listening...'
-                  : 'Available'}
-              </Badge>
-            </div>
-            <div className="text-xs text-text-muted flex items-center gap-1.5">
-              <span className="text-brand-purple-light font-medium">{person.role}</span>
-              <span>•</span>
-              <span className="text-text-dim flex items-center gap-1">
-                <Volume2 className="w-3 h-3 text-text-muted" />
-                {voiceProfile?.voiceName || 'Voice Enabled'}
-              </span>
-            </div>
-          </div>
+        {/* Avatar + Status ping */}
+        <div className="relative shrink-0">
+          <Avatar
+            name={person.name}
+            emoji={personEmoji}
+            size="md"
+            status={isStreaming ? 'working' : presenceState === 'speaking' ? 'working' : 'available'}
+          />
+          {presenceState === 'speaking' && (
+            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#7c9bf7] border-2 border-[#0d1117] animate-ping" />
+          )}
         </div>
 
-        {/* Header Action Buttons */}
-        <div className="flex items-center gap-1.5">
+        {/* Name + role */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-sm font-bold text-text-primary truncate">{person.name}</h2>
+            <span className={cn(
+              'cosmos-chip text-[10px]',
+              presenceState === 'speaking' ? 'cosmos-chip-blue'
+              : isStreaming ? 'cosmos-chip-amber'
+              : isRecording ? 'cosmos-chip-red'
+              : 'cosmos-chip-green',
+            )}>
+              <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
+              {presenceState === 'speaking' ? 'Speaking' : isStreaming ? 'Thinking' : isRecording ? 'Listening' : 'Online'}
+            </span>
+          </div>
+          <p className="text-[11px] text-text-muted truncate">{person.role}</p>
+        </div>
+
+        {/* Action Pill Buttons - minimal on mobile */}
+        <div className="flex items-center gap-1 shrink-0">
           {presenceState === 'speaking' && (
-            <Button
-              variant="outline"
-              size="sm"
-              leftIcon={Square}
+            <button
               onClick={handleStopSpeaking}
-              className="text-xs text-brand-purple-light border-brand-purple/40 bg-brand-purple/10"
+              className="cosmos-btn cosmos-btn-ghost text-[11px] px-2 py-1 h-auto gap-1 rounded-lg"
             >
-              Stop Voice
-            </Button>
+              <Square className="w-3 h-3" /> Stop
+            </button>
           )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            leftIcon={Radio}
+          <button
             onClick={voiceConversationDisclosure.onOpen}
-            title="Start interactive voice conversation"
-            className="text-brand-purple-light border-brand-purple/40 bg-gradient-to-r from-brand-purple/10 to-brand-indigo/10 hover:from-brand-purple/20 hover:to-brand-indigo/20 font-bold"
+            title="Voice Mode"
+            className="w-8 h-8 cosmos-btn-icon rounded-xl text-[#a5bef9]"
           >
-            <span>Voice Mode</span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            leftIcon={Volume2}
-            onClick={voiceSettingsDisclosure.onOpen}
-            title="Configure Voice"
-            className="hidden sm:inline-flex"
-          >
-            Voice
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            leftIcon={Brain}
+            <Radio className="w-4 h-4" />
+          </button>
+          <button
             onClick={memoryDisclosure.onOpen}
-            title="View what this person remembers"
-            className="text-brand-purple-light hover:text-white"
+            title="Memory"
+            className="hidden sm:flex w-8 h-8 cosmos-btn-icon rounded-xl"
           >
-            <span>Memory</span>
-          </Button>
-
-          <Link to={`/world/${world.id}/people/${person.id}`}>
-            <Button variant="ghost" size="sm" leftIcon={User} className="hidden sm:inline-flex">
-              Profile
-            </Button>
-          </Link>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            leftIcon={Sliders}
-            onClick={intelligenceDisclosure.onOpen}
-            title="Configure Intelligence"
-            className="hidden sm:inline-flex"
-          >
-            Intelligence
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            leftIcon={RotateCcw}
+            <Brain className="w-4 h-4" />
+          </button>
+          <button
             onClick={handleResetConversation}
-            title="Reset Conversation"
+            title="Reset Chat"
+            className="w-8 h-8 cosmos-btn-icon rounded-xl"
           >
-            <span className="hidden sm:inline">Reset</span>
-          </Button>
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
-      {/* Offline Alert Banner */}
+      {/* Alert Banner */}
       {errorBanner && (
-        <div className="my-2 p-3 bg-brand-amber-subtle border border-brand-amber/30 rounded-2xl flex items-center justify-between text-xs text-brand-amber animate-fade-in shrink-0">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{errorBanner}</span>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            leftIcon={RefreshCw}
+        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-300 animate-fade-in shrink-0 mt-1">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span className="flex-1">{errorBanner}</span>
+          <button
             onClick={loadData}
+            className="flex items-center gap-1 text-amber-300 hover:text-amber-100 font-semibold transition-colors"
           >
-            Retry Connection
-          </Button>
+            <RefreshCw className="w-3 h-3" /> Retry
+          </button>
         </div>
       )}
 
-      {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+      {/* ── Messages ── */}
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
         {messages.length === 0 ? (
-          <div className="min-h-[50vh] flex flex-col items-center justify-center text-center p-6 space-y-5 animate-fade-in max-w-lg mx-auto">
+          /* Welcome / Starter prompts */
+          <div className="flex flex-col items-center justify-center min-h-[55vh] text-center p-4 space-y-5 animate-fade-up max-w-sm mx-auto">
             <div className="relative">
               <Avatar name={person.name} emoji={personEmoji} size="xl" />
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-background-elevated border border-border flex items-center justify-center text-xs">
+              <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full cosmos-card flex items-center justify-center text-sm shadow-cosmos-sm">
                 ✨
               </div>
             </div>
-
-            <div className="space-y-1">
-              <h3 className="text-xl font-bold text-text-primary">
-                Hi, I'm {person.name}.
-              </h3>
-              <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
-                {person.description || `I'm ready to help you with ${person.role} tasks in ${world.name}.`}
+            <div className="space-y-1.5">
+              <h3 className="text-xl font-bold text-text-primary">Hi, I'm {person.name}.</h3>
+              <p className="text-sm text-text-secondary leading-relaxed">
+                {person.description || `I'm here to help you with ${person.role} in ${world.name}.`}
               </p>
             </div>
-
-            <div className="w-full space-y-2 pt-2 text-left">
-              <span className="text-[11px] font-bold uppercase text-text-muted tracking-wider block text-center">
-                Suggested conversation starters:
-              </span>
+            <div className="w-full space-y-2">
+              <p className="text-[11px] text-text-muted uppercase tracking-wider font-semibold">Conversation starters</p>
               <div className="flex flex-col gap-2">
                 {starterPrompts.map((prompt, idx) => (
                   <button
                     key={idx}
                     onClick={() => handleSendMessage(prompt)}
-                    className="p-3 rounded-2xl bg-background-surface hover:bg-background-elevated border border-border hover:border-brand-purple/40 text-xs text-text-secondary hover:text-text-primary text-left transition-all cursor-pointer flex items-center justify-between group"
+                    className="p-3 rounded-2xl cosmos-card cosmos-card-interactive text-left text-xs text-text-secondary hover:text-text-primary flex items-center justify-between gap-2"
                   >
-                    <span className="line-clamp-1">"{prompt}"</span>
-                    <Sparkles className="w-3.5 h-3.5 text-text-dim group-hover:text-brand-purple-light shrink-0 ml-2" />
+                    <span className="line-clamp-2 flex-1">{prompt}</span>
+                    <Sparkles className="w-3.5 h-3.5 shrink-0 text-[#7c9bf7] opacity-60" />
                   </button>
                 ))}
               </div>
@@ -582,40 +508,39 @@ export const PersonChatPage: React.FC = () => {
               <div
                 key={msg.id}
                 className={cn(
-                  'flex items-start gap-3 animate-fade-in group',
+                  'flex items-end gap-2.5 fade-up',
                   isUser ? 'flex-row-reverse' : 'flex-row',
                 )}
               >
+                {/* AI avatar — only for non-user */}
                 {!isUser && (
-                  <Avatar
-                    name={person.name}
-                    emoji={personEmoji}
-                    size="sm"
-                    className="mt-0.5 shrink-0"
-                  />
+                  <div className="shrink-0 mb-0.5">
+                    <Avatar name={person.name} emoji={personEmoji} size="sm" />
+                  </div>
                 )}
 
-                <div className="space-y-1 max-w-[85%] sm:max-w-[75%]">
-                  <div
-                    className={cn(
-                      'rounded-3xl p-4 text-xs sm:text-sm leading-relaxed space-y-1.5 shadow-sm font-sans',
-                      isUser
-                        ? 'bg-gradient-to-r from-brand-purple to-brand-indigo text-white rounded-tr-sm'
-                        : 'bg-background-surface border border-border text-text-primary rounded-tl-sm',
-                    )}
-                  >
-                    <div className="whitespace-pre-wrap leading-relaxed">
-                      {msg.content || (
-                        <span className="inline-flex items-center gap-1 text-text-muted italic">
-                          <span className="w-1.5 h-1.5 rounded-full bg-brand-purple animate-ping" />
-                          Thinking...
-                        </span>
+                <div className={cn('space-y-1', isUser ? 'items-end' : 'items-start', 'flex flex-col max-w-[82%] sm:max-w-[72%]')}>
+                  {/* Bubble */}
+                  {isUser ? (
+                    <div className="bubble-user">
+                      <div className="whitespace-pre-wrap">{msg.content}</div>
+                    </div>
+                  ) : (
+                    <div className="bubble-ai">
+                      {msg.content ? (
+                        <div className="whitespace-pre-wrap">{msg.content}</div>
+                      ) : (
+                        /* Thinking dots */
+                        <div className="dot-pulse">
+                          <span /><span /><span />
+                        </div>
                       )}
                     </div>
-                  </div>
+                  )}
 
+                  {/* Voice play button */}
                   {!isUser && msg.content && (
-                    <div className="flex items-center gap-2 pl-2">
+                    <div className="pl-1">
                       <VoicePlayerButton
                         text={msg.content}
                         voiceProfile={voiceProfile}
@@ -631,39 +556,35 @@ export const PersonChatPage: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Chat Input Bar */}
-      <div className="p-3 sm:p-4 rounded-3xl bg-background-surface border border-border shrink-0 shadow-lg space-y-2">
-        {/* Live Microphone Recording Banner */}
+      {/* ── Input Bar ── */}
+      <div className="shrink-0 px-2 pb-3 pt-2 space-y-2">
+        {/* Mic recording banner */}
         {isRecording && (
-          <div className="p-2.5 rounded-2xl bg-brand-rose/10 border border-brand-rose/30 flex items-center justify-between animate-fade-in text-xs">
-            <div className="flex items-center gap-2.5">
-              <span className="w-3 h-3 rounded-full bg-brand-rose animate-ping shrink-0" />
-              <span className="font-bold text-brand-rose">Listening to you...</span>
-              <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-xs text-rose-300 animate-fade-in">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-400 animate-ping shrink-0" />
+            <span className="font-semibold flex-1">Listening...</span>
+            {/* waveform */}
+            <div className="flex items-center gap-0.5">
+              {[8, 14, 10].map((base, i) => (
                 <span
-                  className="w-1 bg-brand-rose rounded-full transition-all"
-                  style={{ height: `${8 + audioLevel * 20}px` }}
+                  key={i}
+                  className="w-1 bg-rose-400 rounded-full transition-all"
+                  style={{ height: `${base + audioLevel * 18}px` }}
                 />
-                <span
-                  className="w-1 bg-brand-rose rounded-full transition-all"
-                  style={{ height: `${12 + audioLevel * 24}px` }}
-                />
-                <span
-                  className="w-1 bg-brand-rose rounded-full transition-all"
-                  style={{ height: `${6 + audioLevel * 16}px` }}
-                />
-              </div>
+              ))}
             </div>
             <button
               onClick={handleToggleMicrophone}
-              className="text-xs font-bold text-brand-rose hover:underline cursor-pointer"
+              className="font-semibold text-rose-300 hover:text-rose-100 transition-colors"
             >
-              Done speaking
+              Done
             </button>
           </div>
         )}
 
-        <div className="flex items-end gap-2">
+        {/* Main input row */}
+        <div className="flex items-end gap-2 cosmos-card px-3 py-2.5">
+          {/* Textarea */}
           <textarea
             ref={textareaRef}
             rows={1}
@@ -673,72 +594,61 @@ export const PersonChatPage: React.FC = () => {
             placeholder={
               isTranscribing
                 ? 'Converting speech to text...'
-                : `Talk to ${person.name}... (or click microphone to speak)`
+                : `Message ${person.name}...`
             }
             disabled={isStreaming || isTranscribing}
-            className="flex-1 bg-background-elevated text-text-primary text-xs sm:text-sm rounded-2xl border border-border px-4 py-3 placeholder:text-text-dim focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple resize-none font-sans max-h-36 disabled:opacity-60"
+            className="flex-1 bg-transparent text-text-primary text-sm placeholder:text-text-dim focus:outline-none resize-none font-sans max-h-36 disabled:opacity-50 leading-relaxed py-1"
             autoFocus
           />
 
-          {/* Microphone Action Button */}
-          <Button
-            variant="outline"
-            size="md"
+          {/* Mic button */}
+          <button
             onClick={handleToggleMicrophone}
             disabled={isStreaming || isTranscribing}
+            title={isRecording ? 'Stop Recording' : 'Voice input'}
             className={cn(
-              'rounded-2xl shrink-0 h-11 px-3.5 transition-all',
+              'w-9 h-9 rounded-xl flex items-center justify-center transition-all shrink-0 disabled:opacity-40',
               isRecording
-                ? 'bg-brand-rose text-white border-brand-rose hover:bg-rose-600 animate-pulse'
-                : 'text-text-secondary hover:text-text-primary',
+                ? 'bg-rose-500 text-white animate-pulse'
+                : 'cosmos-btn-icon',
             )}
-            title={isRecording ? 'Stop Recording' : 'Speak with Microphone'}
           >
             {isTranscribing ? (
-              <Loader2 className="w-4 h-4 animate-spin text-brand-purple-light" />
+              <Loader2 className="w-4 h-4 animate-spin text-[#7c9bf7]" />
             ) : isRecording ? (
-              <Square className="w-4 h-4 fill-current" />
+              <Square className="w-3.5 h-3.5 fill-current" />
             ) : (
               <Mic className="w-4 h-4" />
             )}
-          </Button>
+          </button>
 
+          {/* Send / Stop */}
           {isStreaming ? (
-            <Button
-              variant="danger"
-              size="md"
-              leftIcon={Square}
+            <button
               onClick={handleStopStreaming}
-              className="rounded-2xl shrink-0 h-11 px-4"
-              title="Stop Generating"
+              className="w-9 h-9 rounded-xl flex items-center justify-center bg-rose-500/20 border border-rose-500/30 text-rose-300 hover:bg-rose-500/30 transition-all shrink-0"
+              title="Stop generating"
             >
-              Stop
-            </Button>
+              <Square className="w-3.5 h-3.5 fill-current" />
+            </button>
           ) : (
-            <Button
-              variant="primary"
-              size="md"
-              leftIcon={Send}
+            <button
               onClick={() => handleSendMessage()}
               disabled={!inputValue.trim()}
-              className="rounded-2xl shrink-0 h-11 px-4"
-              title="Send Message"
+              className="cosmos-btn cosmos-btn-primary w-9 h-9 rounded-xl p-0 shrink-0 disabled:opacity-30 disabled:pointer-events-none"
+              title="Send"
             >
-              Send
-            </Button>
+              <Send className="w-4 h-4" />
+            </button>
           )}
         </div>
 
-        <div className="flex items-center justify-between text-[11px] text-text-dim px-2">
-          <span>Shift + Enter for new line • Click 🎤 to speak</span>
+        {/* Footer hint */}
+        <div className="flex items-center justify-between text-[10px] text-text-dim px-1">
+          <span>Enter to send • Shift+Enter new line</span>
           <span className="flex items-center gap-1">
-            <span
-              className={cn(
-                'w-2 h-2 rounded-full',
-                isLLMOnline ? 'bg-brand-emerald' : 'bg-brand-amber',
-              )}
-            />
-            {isLLMOnline ? 'Local Intelligence Online' : 'Intelligence Offline'}
+            <span className={cn('w-1.5 h-1.5 rounded-full', isLLMOnline ? 'bg-emerald-400' : 'bg-amber-400')} />
+            {isLLMOnline ? 'AI Online' : 'AI Offline'}
           </span>
         </div>
       </div>

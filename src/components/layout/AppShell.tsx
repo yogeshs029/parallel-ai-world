@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { MobileNav } from './MobileNav';
 import { CommandPalette } from './CommandPalette';
+import { UniverseStarfield } from '../ui/UniverseStarfield';
 import { CreateWorldModal } from '../../features/worlds/components/CreateWorldModal';
 import { useDisclosure } from '../../hooks/useDisclosure';
 import { cn } from '../../lib/utils';
@@ -31,7 +32,10 @@ export const AppShell: React.FC = () => {
   }, [searchDisclosure]);
 
   return (
-    <div className="min-h-screen bg-app-ambient text-text-primary selection:bg-brand-purple/30 selection:text-white">
+    <div className="min-h-screen relative text-text-primary selection:bg-brand-purple/40 selection:text-white">
+      {/* 🌌 Universe Starfield Canvas Background */}
+      <UniverseStarfield />
+
       {/* Desktop Sidebar */}
       <Sidebar
         isCollapsed={isSidebarCollapsed}
@@ -42,7 +46,7 @@ export const AppShell: React.FC = () => {
       {/* Main Layout Container */}
       <div
         className={cn(
-          'flex flex-col min-h-screen transition-all duration-250 ease-in-out',
+          'flex flex-col min-h-screen transition-all duration-300 ease-in-out relative z-10',
           isSidebarCollapsed ? 'md:pl-20' : 'md:pl-64',
         )}
       >
@@ -53,7 +57,7 @@ export const AppShell: React.FC = () => {
         />
 
         {/* Content Area */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl w-full mx-auto pb-24 md:pb-12">
+        <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-6xl w-full mx-auto pb-24 md:pb-12 animate-fade-in">
           <Outlet />
         </main>
       </div>
@@ -61,13 +65,12 @@ export const AppShell: React.FC = () => {
       {/* Mobile Bottom Navigation */}
       <MobileNav onCreateWorldClick={createWorldDisclosure.onOpen} />
 
-      {/* Universal Search / Command Palette Dialog */}
+      {/* Modals and Overlays */}
       <CommandPalette
         isOpen={searchDisclosure.isOpen}
         onClose={searchDisclosure.onClose}
       />
 
-      {/* Global Create World Modal */}
       <CreateWorldModal
         isOpen={createWorldDisclosure.isOpen}
         onClose={createWorldDisclosure.onClose}
@@ -75,3 +78,5 @@ export const AppShell: React.FC = () => {
     </div>
   );
 };
+
+export default AppShell;

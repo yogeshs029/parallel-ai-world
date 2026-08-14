@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
@@ -7,77 +8,314 @@
     --sar: env(safe-area-inset-right, 0px);
     --sab: env(safe-area-inset-bottom, 0px);
     --sal: env(safe-area-inset-left, 0px);
+
+    /* Material 3 Cosmos color tokens */
+    --cosmos-bg:         #0d1117;
+    --cosmos-surface:    rgba(22, 30, 48, 0.85);
+    --cosmos-card:       rgba(28, 38, 60, 0.80);
+    --cosmos-elevated:   rgba(38, 52, 82, 0.90);
+    --cosmos-border:     rgba(148, 163, 184, 0.14);
+    --cosmos-border-dim: rgba(148, 163, 184, 0.08);
+    --cosmos-accent:     #7c9bf7;
+    --cosmos-accent-2:   #a78bfa;
+    --cosmos-text:       #e8edf8;
+    --cosmos-text-2:     #a0aec0;
+    --cosmos-text-3:     #5e7294;
+    --radius-card:       20px;
+    --radius-input:      14px;
+    --radius-pill:       999px;
   }
 
   * {
-    border-color: #1f293d;
+    box-sizing: border-box;
+    border-color: var(--cosmos-border);
+  }
+
+  html {
+    font-size: 15px;
   }
 
   body {
-    background-color: #0b0f19;
-    color: #f8fafc;
-    font-family: 'Outfit', 'Inter', sans-serif;
+    background-color: var(--cosmos-bg);
+    color: var(--cosmos-text);
+    font-family: 'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+    line-height: 1.6;
   }
 
-  /* Custom subtle scrollbar */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: #0b0f19;
-  }
-
+  /* Smooth cosmos scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: #1e2942;
-    border-radius: 9999px;
+    background: rgba(124, 155, 247, 0.2);
+    border-radius: 99px;
   }
-
   ::-webkit-scrollbar-thumb:hover {
-    background: #334155;
+    background: rgba(124, 155, 247, 0.45);
   }
 }
 
 @layer utilities {
-  /* Safe area insets for Capacitor / mobile devices */
-  .pt-safe {
-    padding-top: max(1rem, var(--sat));
-  }
-  .pb-safe {
-    padding-bottom: max(1rem, var(--sab));
-  }
-  .pb-safe-nav {
-    padding-bottom: calc(4.5rem + var(--sab));
-  }
-  .pl-safe {
-    padding-left: max(1rem, var(--sal));
-  }
-  .pr-safe {
-    padding-right: max(1rem, var(--sar));
+  .pt-safe { padding-top: max(0.75rem, var(--sat)); }
+  .pb-safe { padding-bottom: max(0.75rem, var(--sab)); }
+  .pb-safe-nav { padding-bottom: calc(5rem + var(--sab)); }
+  .pl-safe { padding-left: max(0.75rem, var(--sal)); }
+  .pr-safe { padding-right: max(0.75rem, var(--sar)); }
+
+  /* ─────────────────────────────────────────
+     COSMOS GLASS CARD  (Material 3 + Stars)
+  ───────────────────────────────────────── */
+  .cosmos-card {
+    background: var(--cosmos-card);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    border: 1px solid var(--cosmos-border);
+    border-radius: var(--radius-card);
+    box-shadow:
+      0 4px 24px 0 rgba(0,0,0,0.28),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
 
-  /* Warm ambient surface background */
-  .bg-app-ambient {
-    background-color: #0b0f19;
-    background-image: 
-      radial-gradient(circle at 15% 10%, rgba(139, 92, 246, 0.07) 0%, transparent 45%),
-      radial-gradient(circle at 85% 20%, rgba(6, 182, 212, 0.05) 0%, transparent 40%),
-      radial-gradient(circle at 50% 90%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
+  .cosmos-card:hover {
+    border-color: rgba(124, 155, 247, 0.28);
+    box-shadow:
+      0 8px 32px 0 rgba(0,0,0,0.35),
+      0 0 20px -4px rgba(124, 155, 247, 0.14),
+      inset 0 1px 0 rgba(255,255,255,0.07);
   }
 
-  /* Friendly modern card */
-  .card-warm {
-    background: #111827;
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+  .cosmos-card-interactive {
+    cursor: pointer;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+  .cosmos-card-interactive:hover {
+    transform: translateY(-2px);
+  }
+  .cosmos-card-interactive:active {
+    transform: scale(0.985) translateY(0);
   }
 
-  .card-warm:hover {
-    border-color: rgba(139, 92, 246, 0.3);
-    box-shadow: 0 10px 28px -4px rgba(0, 0, 0, 0.5), 0 0 20px -4px rgba(139, 92, 246, 0.15);
+  /* ─── INPUTS ─── */
+  .cosmos-input {
+    background: rgba(15, 22, 38, 0.7);
+    border: 1.5px solid var(--cosmos-border);
+    border-radius: var(--radius-input);
+    color: var(--cosmos-text);
+    font-family: inherit;
+    font-size: 0.875rem;
+    padding: 0.65rem 1rem;
+    width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .cosmos-input::placeholder {
+    color: var(--cosmos-text-3);
+    font-size: 0.84rem;
+  }
+  .cosmos-input:focus {
+    border-color: rgba(124, 155, 247, 0.55);
+    box-shadow: 0 0 0 3px rgba(124, 155, 247, 0.12);
+    background: rgba(18, 26, 44, 0.85);
+  }
+  .cosmos-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* ─── BUTTONS ─── */
+  .cosmos-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border-radius: var(--radius-input);
+    font-family: inherit;
+    font-weight: 500;
+    font-size: 0.8125rem;
+    padding: 0.55rem 1.1rem;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    border: none;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .cosmos-btn:active { transform: scale(0.96); }
+  .cosmos-btn-primary {
+    background: linear-gradient(135deg, #7c9bf7 0%, #a78bfa 100%);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(124, 155, 247, 0.3);
+  }
+  .cosmos-btn-primary:hover {
+    box-shadow: 0 6px 22px rgba(124, 155, 247, 0.45);
+    filter: brightness(1.07);
+  }
+  .cosmos-btn-ghost {
+    background: transparent;
+    color: var(--cosmos-text-2);
+    border: 1.5px solid var(--cosmos-border);
+  }
+  .cosmos-btn-ghost:hover {
+    background: rgba(124, 155, 247, 0.1);
+    border-color: rgba(124, 155, 247, 0.28);
+    color: var(--cosmos-text);
+  }
+  .cosmos-btn-icon {
+    padding: 0.5rem;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--cosmos-text-2);
+    border: 1.5px solid transparent;
+  }
+  .cosmos-btn-icon:hover {
+    background: rgba(255,255,255,0.06);
+    border-color: var(--cosmos-border);
+    color: var(--cosmos-text);
+  }
+
+  /* ─── NAV ITEM ─── */
+  .cosmos-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.55rem 0.85rem;
+    border-radius: 12px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--cosmos-text-2);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    border: 1px solid transparent;
+  }
+  .cosmos-nav-item:hover {
+    background: rgba(124, 155, 247, 0.08);
+    color: var(--cosmos-text);
+  }
+  .cosmos-nav-item.active {
+    background: rgba(124, 155, 247, 0.15);
+    border-color: rgba(124, 155, 247, 0.25);
+    color: #a5bef9;
+    font-weight: 600;
+  }
+
+  /* ─── SURFACE / PANEL ─── */
+  .cosmos-surface {
+    background: var(--cosmos-surface);
+    backdrop-filter: blur(24px) saturate(1.3);
+    -webkit-backdrop-filter: blur(24px) saturate(1.3);
+    border: 1px solid var(--cosmos-border);
+  }
+
+  /* ─── FADE ANIMATIONS ─── */
+  .fade-up {
+    animation: fadeUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-in {
+    animation: fadeIn 0.22s ease both;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* User bubble */
+  .bubble-user {
+    background: linear-gradient(135deg, #4a6cf7 0%, #7c4af7 100%);
+    color: #fff;
+    border-radius: 18px 18px 4px 18px;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    box-shadow: 0 4px 18px rgba(74, 108, 247, 0.25);
+  }
+
+  /* Assistant bubble */
+  .bubble-ai {
+    background: rgba(22, 32, 52, 0.82);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-radius: 4px 18px 18px 18px;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--cosmos-text);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  }
+
+  /* Thinking pulse dots */
+  .dot-pulse {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .dot-pulse span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #7c9bf7;
+    animation: dotBounce 1.2s ease infinite;
+  }
+  .dot-pulse span:nth-child(2) { animation-delay: 0.2s; }
+  .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dotBounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+    40%           { transform: translateY(-5px); opacity: 1; }
+  }
+
+  /* Chip / badge */
+  .cosmos-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+  .cosmos-chip-blue {
+    background: rgba(124, 155, 247, 0.14);
+    color: #a5bef9;
+    border-color: rgba(124, 155, 247, 0.2);
+  }
+  .cosmos-chip-green {
+    background: rgba(52, 211, 153, 0.12);
+    color: #6ee7b7;
+    border-color: rgba(52, 211, 153, 0.18);
+  }
+  .cosmos-chip-amber {
+    background: rgba(251, 191, 36, 0.12);
+    color: #fcd34d;
+    border-color: rgba(251, 191, 36, 0.18);
+  }
+  .cosmos-chip-purple {
+    background: rgba(167, 139, 250, 0.14);
+    color: #c4b5fd;
+    border-color: rgba(167, 139, 250, 0.2);
+  }
+  .cosmos-chip-red {
+    background: rgba(251, 113, 133, 0.12);
+    color: #fda4af;
+    border-color: rgba(251, 113, 133, 0.18);
+  }
+
+  /* Bottom mobile nav */
+  .cosmos-bottom-nav {
+    background: rgba(10, 15, 28, 0.92);
+    backdrop-filter: blur(28px) saturate(1.5);
+    -webkit-backdrop-filter: blur(28px) saturate(1.5);
+    border-top: 1px solid var(--cosmos-border);
   }
 }

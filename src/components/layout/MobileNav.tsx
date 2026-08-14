@@ -9,49 +9,67 @@ export interface MobileNavProps {
 }
 
 export const MobileNav: React.FC<MobileNavProps> = ({ onCreateWorldClick }) => {
-  const getIcon = (iconName: string) => {
+  const navItems = siteConfig.mobileNav;
+
+  const getIcon = (iconName: string, isActive?: boolean) => {
+    const cls = cn('w-5 h-5 transition-transform duration-200', isActive && 'scale-110');
     switch (iconName) {
-      case 'Home':
-        return <Home className="w-5 h-5" />;
-      case 'Globe':
-        return <Globe className="w-5 h-5" />;
-      case 'Users':
-        return <Users className="w-5 h-5" />;
-      case 'Activity':
-        return <Activity className="w-5 h-5" />;
-      case 'Settings':
-        return <Settings className="w-5 h-5" />;
-      default:
-        return <Home className="w-5 h-5" />;
+      case 'Home':     return <Home className={cls} />;
+      case 'Globe':    return <Globe className={cls} />;
+      case 'Users':    return <Users className={cls} />;
+      case 'Activity': return <Activity className={cls} />;
+      case 'Settings': return <Settings className={cls} />;
+      default:         return <Home className={cls} />;
     }
   };
 
+  const half1 = navItems.slice(0, 2);
+  const half2 = navItems.slice(2);
+
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background-surface/95 backdrop-blur-lg border-t border-border px-2 pb-safe select-none">
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
-        {siteConfig.mobileNav.slice(0, 2).map((item) => (
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 cosmos-bottom-nav pb-safe select-none">
+      <div className="flex items-center justify-around h-[62px] max-w-lg mx-auto px-2">
+        {/* First two items */}
+        {half1.map((item) => (
           <NavLink
             key={item.href}
             to={item.href}
             end={item.exact}
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center flex-1 h-full py-1 text-[11px] font-medium transition-colors',
-                isActive ? 'text-brand-purple-light font-bold' : 'text-text-muted hover:text-text-primary',
+                'flex flex-col items-center justify-center flex-1 h-full pt-2 gap-1 transition-all duration-200 relative',
+                isActive ? 'text-[#7c9bf7]' : 'text-text-muted',
               )
             }
           >
-            {getIcon(item.iconName)}
-            <span className="mt-1">{item.title}</span>
+            {({ isActive }) => (
+              <>
+                {isActive && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-[#7c9bf7]" />
+                )}
+                <span className={cn(
+                  'w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200',
+                  isActive ? 'bg-[#7c9bf7]/15' : 'bg-transparent',
+                )}>
+                  {getIcon(item.iconName, isActive)}
+                </span>
+                <span className={cn(
+                  'text-[10px] font-medium transition-colors',
+                  isActive ? 'text-[#a5bef9]' : 'text-text-dim',
+                )}>
+                  {item.title}
+                </span>
+              </>
+            )}
           </NavLink>
         ))}
 
-        {/* Center Quick Create Button */}
+        {/* Center FAB */}
         {onCreateWorldClick && (
-          <div className="flex items-center justify-center px-2">
+          <div className="flex items-center justify-center px-3">
             <button
               onClick={onCreateWorldClick}
-              className="w-10 h-10 rounded-full bg-brand-purple hover:bg-brand-purple-dark text-white flex items-center justify-center shadow-lg shadow-brand-purple/30 transition-transform active:scale-95"
+              className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#7c9bf7] to-[#7c4af7] text-white flex items-center justify-center shadow-cosmos-glow transition-all duration-200 hover:opacity-90 active:scale-90"
               aria-label="Create World"
             >
               <Plus className="w-5 h-5" />
@@ -59,20 +77,38 @@ export const MobileNav: React.FC<MobileNavProps> = ({ onCreateWorldClick }) => {
           </div>
         )}
 
-        {siteConfig.mobileNav.slice(2).map((item) => (
+        {/* Last two items */}
+        {half2.map((item) => (
           <NavLink
             key={item.href}
             to={item.href}
             end={item.exact}
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center flex-1 h-full py-1 text-[11px] font-medium transition-colors',
-                isActive ? 'text-brand-purple-light font-bold' : 'text-text-muted hover:text-text-primary',
+                'flex flex-col items-center justify-center flex-1 h-full pt-2 gap-1 transition-all duration-200 relative',
+                isActive ? 'text-[#7c9bf7]' : 'text-text-muted',
               )
             }
           >
-            {getIcon(item.iconName)}
-            <span className="mt-1">{item.title}</span>
+            {({ isActive }) => (
+              <>
+                {isActive && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-[#7c9bf7]" />
+                )}
+                <span className={cn(
+                  'w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200',
+                  isActive ? 'bg-[#7c9bf7]/15' : 'bg-transparent',
+                )}>
+                  {getIcon(item.iconName, isActive)}
+                </span>
+                <span className={cn(
+                  'text-[10px] font-medium transition-colors',
+                  isActive ? 'text-[#a5bef9]' : 'text-text-dim',
+                )}>
+                  {item.title}
+                </span>
+              </>
+            )}
           </NavLink>
         ))}
       </div>
