@@ -38,9 +38,16 @@ export interface World {
   // Backward compatibility alias
   activeTasksCount: number;
   status: 'active' | 'archived';
+  settings?: WorldSettings;
   tags: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface WorldSettings {
+  allowInterPersonCommunication: boolean;
+  allowRelationshipFormation: boolean;
+  allowAutoConversationInitiation: boolean;
 }
 
 export interface CreateWorldInput {

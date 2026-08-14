@@ -1,4 +1,3 @@
-from fastapi import APIRouter
 from .endpoints import (
     health,
     chat,
@@ -11,6 +10,8 @@ from .endpoints import (
     permissions,
     conversation,
     voice,
+    relationships,
+    conversations,
 )
 
 api_router = APIRouter()
@@ -30,3 +31,8 @@ api_router.include_router(conversation.router, prefix="", tags=["Conversation"])
 
 # Module 7: Voice & Presence
 api_router.include_router(voice.router, prefix="", tags=["Voice"])
+
+# Module 8: Relationships & Communication
+api_router.include_router(relationships.router, prefix="", tags=["Relationships"])
+api_router.include_router(conversations.router, prefix="", tags=["P2P Conversations"])
+

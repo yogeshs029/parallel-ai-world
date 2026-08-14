@@ -60,6 +60,10 @@ export interface PersonPermissions {
   projectCreate: boolean;
   projectEdit: boolean;
   messageUser: boolean;
+  communicateWithPeople: boolean;
+  receiveMessages: boolean;
+  viewConversations: boolean;
+  createGroupConversations: boolean;
   updatedAt: string;
 }
 

@@ -166,6 +166,11 @@ export const WorldPeoplePage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
+          <Link to={`/world/${world.id}/relationships`}>
+            <Button variant="secondary" size="md" leftIcon={Users}>
+              Relationship Graph
+            </Button>
+          </Link>
           <Button
             variant="primary"
             size="md"

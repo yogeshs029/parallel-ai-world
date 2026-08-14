@@ -20,6 +20,10 @@ function getDefaultPermissions(worldId: string, personId: string): PersonPermiss
     projectCreate: true,
     projectEdit: false,
     messageUser: true,
+    communicateWithPeople: true,
+    receiveMessages: true,
+    viewConversations: true,
+    createGroupConversations: true,
     updatedAt: new Date().toISOString(),
   };
 }

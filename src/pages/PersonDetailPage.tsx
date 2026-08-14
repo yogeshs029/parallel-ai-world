@@ -20,6 +20,7 @@ import {
   Volume2,
   Play,
   Square,
+  Users,
 } from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
 import { Badge, BadgeVariant } from '../components/ui/Badge';
@@ -46,11 +47,17 @@ import { memoryService } from '../services/memoryService';
 import { knowledgeService } from '../services/knowledgeService';
 import { permissionService } from '../services/permissionService';
 import { voiceService } from '../services/voiceService';
+import { relationshipService } from '../services/relationshipService';
+import { communicationService } from '../services/communicationService';
+import { AddRelationshipModal } from '../features/relationships/components/AddRelationshipModal';
 import { World, Person } from '../types';
 import { Memory } from '../types/memory';
 import { KnowledgeSource } from '../types/knowledge';
 import { PersonPermissions } from '../types/runtime';
 import { VoiceProfile } from '../types/voice';
+import { Relationship } from '../types/relationship';
+import { PersonConversation } from '../types/communication';
+
 
 export const PersonDetailPage: React.FC = () => {
   const { worldId, personId } = useParams<{ worldId: string; personId: string }>();
@@ -63,6 +70,9 @@ export const PersonDetailPage: React.FC = () => {
   const [knowledgeList, setKnowledgeList] = useState<KnowledgeSource[]>([]);
   const [permissions, setPermissions] = useState<PersonPermissions | null>(null);
   const [voiceProfile, setVoiceProfile] = useState<VoiceProfile | null>(null);
+  const [relationships, setRelationships] = useState<Relationship[]>([]);
+  const [allPeople, setAllPeople] = useState<Person[]>([]);
+  const [conversations, setConversations] = useState<PersonConversation[]>([]);
   const [isPreviewingVoice, setIsPreviewingVoice] = useState(false);
   const [previewAudio, setPreviewAudio] = useState<HTMLAudioElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,25 +91,32 @@ export const PersonDetailPage: React.FC = () => {
   const addKnowledgeDisclosure = useDisclosure(false);
   const deleteKnowledgeDisclosure = useDisclosure(false);
   const permissionsDisclosure = useDisclosure(false);
+  const addRelDisclosure = useDisclosure(false);
 
   const loadData = useCallback(async () => {
     if (!worldId || !personId) return;
     try {
       setIsLoading(true);
-      const [w, p, mems, kList, perms, vProfile] = await Promise.all([
+      const [w, p, pList, mems, kList, perms, vProfile, rels, convs] = await Promise.all([
         worldService.getWorldById(worldId),
         peopleService.getPerson(worldId, personId),
+        peopleService.getPeople(worldId),
         memoryService.getPersonMemories(worldId, personId),
         knowledgeService.getKnowledgeList(worldId, { personId }),
         permissionService.getPermissions(worldId, personId),
         voiceService.getPersonVoice(worldId, personId),
+        relationshipService.getPersonRelationships(worldId, personId),
+        communicationService.getConversations(worldId),
       ]);
       setWorld(w);
       setPerson(p);
+      setAllPeople(pList);
       setMemories(mems);
       setKnowledgeList(kList);
       setPermissions(perms);
       setVoiceProfile(vProfile);
+      setRelationships(rels);
+      setConversations(convs.filter((c: PersonConversation) => c.participantIds.includes(personId)));
     } catch (err) {
       console.error('Failed to load person data:', err);
     } finally {
@@ -537,6 +554,123 @@ export const PersonDetailPage: React.FC = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Relationships Card (Module 8) */}
+          <Card className="p-6 space-y-4">
+            <CardHeader className="p-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-[#007aff]" />
+                  <CardTitle className="text-sm font-bold text-slate-900">
+                    Relationships ({relationships.length})
+                  </CardTitle>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Link
+                    to={`/world/${world.id}/relationships`}
+                    className="text-xs text-[#007aff] hover:underline font-semibold"
+                  >
+                    View Graph
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    leftIcon={Plus}
+                    onClick={addRelDisclosure.onOpen}
+                  >
+                    Add
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {relationships.length === 0 ? (
+                <p className="text-xs text-slate-400 italic">No relationships connected yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {relationships.map((rel) => {
+                    const isOutgoing = rel.fromPersonId === person.id;
+                    const otherId = isOutgoing ? rel.toPersonId : rel.fromPersonId;
+                    const other = allPeople.find((p) => p.id === otherId);
+                    if (!other) return null;
+
+                    return (
+                      <div
+                        key={rel.id}
+                        className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200/60 text-xs"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Avatar name={other.name} emoji={other.avatar?.emoji || other.avatarEmoji || '👤'} size="sm" />
+                          <div>
+                            <div className="font-bold text-slate-900">{other.name}</div>
+                            <div className="text-[10px] text-slate-500">{other.role}</div>
+                          </div>
+                        </div>
+                        <span className="cosmos-chip cosmos-chip-blue text-[10px] capitalize">
+                          {isOutgoing ? rel.type.replace('_', ' ') : `Connected (${rel.type.replace('_', ' ')})`}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Person-to-Person Conversations Card (Module 8) */}
+          <Card className="p-6 space-y-4">
+            <CardHeader className="p-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-[#007aff]" />
+                  <CardTitle className="text-sm font-bold text-slate-900">
+                    P2P Conversations ({conversations.length})
+                  </CardTitle>
+                </div>
+                <Link
+                  to={`/world/${world.id}/conversations`}
+                  className="text-xs text-[#007aff] hover:underline font-semibold"
+                >
+                  View All
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {conversations.length === 0 ? (
+                <p className="text-xs text-slate-400 italic">No internal person conversations yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {conversations.slice(0, 3).map((conv) => {
+                    const otherId = conv.participantIds.find((id) => id !== person.id);
+                    const other = allPeople.find((p) => p.id === otherId);
+
+                    return (
+                      <Link
+                        key={conv.id}
+                        to={`/world/${world.id}/conversations/${conv.id}`}
+                        className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/60 text-xs transition-colors group"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {other && (
+                            <Avatar name={other.name} emoji={other.avatar?.emoji || other.avatarEmoji || '👤'} size="sm" />
+                          )}
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900 group-hover:text-[#007aff] truncate">
+                              With {other?.name || 'Person'}
+                            </div>
+                            <div className="text-[10px] text-slate-500 truncate">
+                              {conv.topic || 'Discussion'}
+                            </div>
+                          </div>
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#007aff]" />
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right 1 Column: Voice, Permissions, Intelligence, Skills */}
@@ -899,6 +1033,15 @@ export const PersonDetailPage: React.FC = () => {
           onDeleted={loadData}
         />
       )}
+
+      <AddRelationshipModal
+        isOpen={addRelDisclosure.isOpen}
+        onClose={addRelDisclosure.onClose}
+        worldId={world.id}
+        fromPerson={person}
+        allPeople={allPeople}
+        onRelationshipAdded={loadData}
+      />
     </div>
   );
 };

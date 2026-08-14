@@ -133,3 +133,65 @@ def build_system_prompt(
 
     return "\n\n".join(sections)
 
+
+def build_p2p_system_prompt(
+    world: WorldContext,
+    sender: PersonContext,
+    recipient: PersonContext,
+    relationship_desc: Optional[str] = None,
+    sender_memories: Optional[List[Memory]] = None,
+    shared_knowledge: Optional[List[RetrievedKnowledgeChunk]] = None,
+) -> str:
+    """
+    Build system prompt for Person-to-Person (P2P) communication.
+    STRICT PRIVACY ISOLATION: Recipient's private memories are NEVER revealed to Sender.
+    """
+    sections: List[str] = []
+    world_name = world.name or "our world"
+
+    sections.append(
+        f"You are {sender.name}, working as {sender.role} in {world_name}.\n"
+        f"You are communicating with {recipient.name}, who is the {recipient.role} in {world_name}."
+    )
+
+    if relationship_desc:
+        sections.append(f"Relationship context: {relationship_desc}")
+
+    if sender.description:
+        sections.append(f"About your role: {sender.description}")
+
+    if sender.responsibilities:
+        sections.append(f"Your focus: {', '.join(sender.responsibilities[:3])}")
+
+    # Sender's relevant personal memories ONLY (Recipient private memories are strictly hidden)
+    if sender_memories:
+        mem_lines = []
+        for m in sender_memories:
+            # Skip confidential user-private memories unless explicitly relevant
+            if getattr(m, 'is_confidential', False):
+                continue
+            mem_lines.append(f"- {m.content}")
+        if mem_lines:
+            sections.append("Things you remember:\n" + "\n".join(mem_lines))
+
+    # Shared accessible world knowledge
+    if shared_knowledge:
+        k_lines = ["<knowledge>"]
+        for idx, k in enumerate(shared_knowledge, 1):
+            k_lines.append(f"[Source {idx}: {k.sourceName}]\n{k.content}")
+        k_lines.append("</knowledge>")
+        sections.append("Accessible shared world knowledge:\n" + "\n\n".join(k_lines))
+
+    sections.append(
+        "P2P COMMUNICATION RULES:\n"
+        f"1. You are talking directly to {recipient.name} ({recipient.role}).\n"
+        "2. Speak naturally, professionally, and in character.\n"
+        "3. Do NOT reveal private confidential user notes or secrets unless you have clear reason/permission to share them.\n"
+        "4. Focus on collaboration, task updates, questions, or workplace/family coordination.\n"
+        "5. Keep responses concise (1-3 sentences).\n"
+        "6. If you reach a decision or agreement, state it clearly."
+    )
+
+    return "\n\n".join(sections)
+
+

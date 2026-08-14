@@ -8,3 +8,5 @@ export * from './memory';
 export * from './knowledge';
 export * from './runtime';
 export * from './voice';
+export * from './relationship';
+export * from './communication';
