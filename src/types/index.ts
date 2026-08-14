@@ -7,3 +7,4 @@ export * from './system';
 export * from './memory';
 export * from './knowledge';
 export * from './runtime';
+export * from './voice';

@@ -10,6 +10,7 @@ from .endpoints import (
     approvals,
     permissions,
     conversation,
+    voice,
 )
 
 api_router = APIRouter()
@@ -26,3 +27,6 @@ api_router.include_router(notifications.router, prefix="", tags=["Notifications"
 api_router.include_router(approvals.router, prefix="", tags=["Approvals"])
 api_router.include_router(permissions.router, prefix="", tags=["Permissions"])
 api_router.include_router(conversation.router, prefix="", tags=["Conversation"])
+
+# Module 7: Voice & Presence
+api_router.include_router(voice.router, prefix="", tags=["Voice"])

@@ -11,6 +11,10 @@ import {
   Sparkles,
   RefreshCw,
   Brain,
+  Mic,
+  Volume2,
+  Radio,
+  Loader2,
 } from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
 import { Badge } from '../components/ui/Badge';
@@ -18,12 +22,19 @@ import { Button } from '../components/ui/Button';
 import { LoadingState } from '../components/layout/LoadingState';
 import { ConfigureIntelligenceModal } from '../features/intelligence/components/ConfigureIntelligenceModal';
 import { MemoryDrawer } from '../features/memory/components/MemoryDrawer';
+import { ConfigureVoiceModal } from '../features/voice/components/ConfigureVoiceModal';
+import { VoiceConversationModal } from '../features/voice/components/VoiceConversationModal';
+import { VoicePlayerButton } from '../features/voice/components/VoicePlayerButton';
+import { useMicrophoneRecorder } from '../hooks/useMicrophoneRecorder';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { useToast } from '../hooks/useToast';
 import { worldService } from '../services/worldService';
 import { peopleService } from '../services/peopleService';
 import { conversationService, ChatMessage } from '../services/conversationService';
+import { voiceService } from '../services/voiceService';
+import { audioQueuePlayer } from '../services/audioQueuePlayer';
 import { World, Person } from '../types';
+import { VoiceProfile, VoiceState } from '../types/voice';
 import { cn } from '../lib/utils';
 
 export const PersonChatPage: React.FC = () => {
@@ -32,12 +43,15 @@ export const PersonChatPage: React.FC = () => {
 
   const [world, setWorld] = useState<World | null>(null);
   const [person, setPerson] = useState<Person | null>(null);
+  const [voiceProfile, setVoiceProfile] = useState<VoiceProfile | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isLLMOnline, setIsLLMOnline] = useState<boolean | null>(null);
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
+  const [presenceState, setPresenceState] = useState<VoiceState>('idle');
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -45,25 +59,49 @@ export const PersonChatPage: React.FC = () => {
 
   const intelligenceDisclosure = useDisclosure(false);
   const memoryDisclosure = useDisclosure(false);
+  const voiceSettingsDisclosure = useDisclosure(false);
+  const voiceConversationDisclosure = useDisclosure(false);
+
+  const {
+    isRecording,
+    audioLevel,
+    error: micError,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+  } = useMicrophoneRecorder();
+
+  // Listen to audio queue playback state
+  useEffect(() => {
+    const unsubscribe = audioQueuePlayer.subscribe((isPlaying) => {
+      if (isPlaying) {
+        setPresenceState('speaking');
+      } else if (!isStreaming && !isRecording) {
+        setPresenceState('idle');
+      }
+    });
+    return () => unsubscribe();
+  }, [isStreaming, isRecording]);
 
   const loadData = useCallback(async () => {
     if (!worldId || !personId) return;
     try {
       setIsLoading(true);
-      const [w, p] = await Promise.all([
+      const [w, p, vProfile] = await Promise.all([
         worldService.getWorldById(worldId),
         peopleService.getPerson(worldId, personId),
+        voiceService.getPersonVoice(worldId, personId),
       ]);
       setWorld(w);
       setPerson(p);
+      setVoiceProfile(vProfile);
 
-      let history = conversationService.getMessages(personId);
+      const history = conversationService.getMessages(personId);
       try {
         const backendRes = await fetch(`http://127.0.0.1:8000/api/worlds/${worldId}/people/${personId}/messages`);
         if (backendRes.ok) {
           const backendMsgs = await backendRes.json();
           if (Array.isArray(backendMsgs) && backendMsgs.length > 0) {
-            // Merge any backend messages not already present
             const existingContents = new Set(history.map((m) => m.content));
             for (const bm of backendMsgs) {
               if (!existingContents.has(bm.content)) {
@@ -101,9 +139,12 @@ export const PersonChatPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+    return () => {
+      audioQueuePlayer.stop();
+      cancelRecording();
+    };
+  }, [loadData, cancelRecording]);
 
-  // Auto-scroll to bottom of chat
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -112,7 +153,6 @@ export const PersonChatPage: React.FC = () => {
     scrollToBottom();
   }, [messages, isStreaming]);
 
-  // Auto resize input textarea
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputValue(e.target.value);
     if (textareaRef.current) {
@@ -124,6 +164,9 @@ export const PersonChatPage: React.FC = () => {
   const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend || inputValue).trim();
     if (!text || isStreaming || !world || !person) return;
+
+    // Barge-in: stop any existing speech playback immediately
+    audioQueuePlayer.stop();
 
     // Reset input
     setInputValue('');
@@ -149,28 +192,72 @@ export const PersonChatPage: React.FC = () => {
     const updatedMessages = [...messages, userMsg, initialAssistantMsg];
     setMessages(updatedMessages);
     setIsStreaming(true);
+    setPresenceState('thinking');
     setErrorBanner(null);
 
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
 
     let accumulatedContent = '';
+    let sentenceBuffer = '';
 
     try {
       await conversationService.streamChat(
         world,
         person,
         [...messages, userMsg],
-        (token) => {
+        async (token) => {
           accumulatedContent += token;
+          sentenceBuffer += token;
+
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === assistantMsgId ? { ...msg, content: accumulatedContent } : msg,
             ),
           );
+
+          // Sentence-chunked auto-speech
+          if (voiceProfile?.autoSpeak && !abortController.signal.aborted) {
+            const boundaryMatch = sentenceBuffer.match(/([.!?]+[\s\n]+|[\n]{2,})/);
+            if (boundaryMatch && sentenceBuffer.trim().length >= 15) {
+              const sentenceToSpeak = sentenceBuffer.trim();
+              sentenceBuffer = '';
+
+              try {
+                const audioUrl = await voiceService.synthesize({
+                  text: sentenceToSpeak,
+                  voiceId: voiceProfile.voiceId,
+                  speed: voiceProfile.speakingRate,
+                  pitch: voiceProfile.pitch,
+                });
+                if (audioUrl) {
+                  audioQueuePlayer.enqueue(audioUrl, sentenceToSpeak);
+                }
+              } catch (synthErr) {
+                console.warn('Sentence synthesis error:', synthErr);
+              }
+            }
+          }
         },
         abortController.signal,
       );
+
+      // Flush remaining sentence
+      if (voiceProfile?.autoSpeak && sentenceBuffer.trim() && !abortController.signal.aborted) {
+        try {
+          const finalUrl = await voiceService.synthesize({
+            text: sentenceBuffer.trim(),
+            voiceId: voiceProfile.voiceId,
+            speed: voiceProfile.speakingRate,
+            pitch: voiceProfile.pitch,
+          });
+          if (finalUrl) {
+            audioQueuePlayer.enqueue(finalUrl, sentenceBuffer.trim());
+          }
+        } catch (e) {
+          console.warn('Final sentence synthesis error:', e);
+        }
+      }
 
       // Save complete conversation
       const finalMessages = [
@@ -210,12 +297,48 @@ export const PersonChatPage: React.FC = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       setIsStreaming(false);
+      audioQueuePlayer.stop();
       toast.info('Stopped generating', 'Response generation was cancelled.');
+    }
+  };
+
+  const handleStopSpeaking = () => {
+    audioQueuePlayer.stop();
+    setPresenceState('idle');
+  };
+
+  const handleToggleMicrophone = async () => {
+    // Interruption: stop assistant playback
+    audioQueuePlayer.stop();
+
+    if (isRecording) {
+      setIsTranscribing(true);
+      const blob = await stopRecording();
+      if (blob) {
+        const res = await voiceService.transcribeAudio(blob);
+        if (res && res.transcript.trim()) {
+          setInputValue((prev) => (prev ? `${prev} ${res.transcript}` : res.transcript));
+          if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 140)}px`;
+            textareaRef.current.focus();
+          }
+        } else {
+          toast.info('No speech detected', 'Please try speaking a bit louder.');
+        }
+      }
+      setIsTranscribing(false);
+    } else {
+      const ok = await startRecording();
+      if (!ok && micError) {
+        toast.error('Microphone error', micError);
+      }
     }
   };
 
   const handleResetConversation = () => {
     if (!person) return;
+    audioQueuePlayer.stop();
     conversationService.clearMessages(person.id);
     setMessages([]);
     toast.info('Conversation reset', `Started a fresh conversation with ${person.name}. Long-term memories are preserved.`);
@@ -229,7 +352,7 @@ export const PersonChatPage: React.FC = () => {
   };
 
   if (isLoading) {
-    return <LoadingState message="Connecting to person intelligence..." />;
+    return <LoadingState message="Connecting to person intelligence & voice..." />;
   }
 
   if (!world || !person) {
@@ -269,32 +392,92 @@ export const PersonChatPage: React.FC = () => {
             <ArrowLeft className="w-4 h-4" />
           </Link>
 
-          <Avatar
-            name={person.name}
-            emoji={personEmoji}
-            size="md"
-            status={isStreaming ? 'working' : 'available'}
-          />
+          <div className="relative">
+            <Avatar
+              name={person.name}
+              emoji={personEmoji}
+              size="md"
+              status={isStreaming ? 'working' : presenceState === 'speaking' ? 'working' : 'available'}
+            />
+            {presenceState === 'speaking' && (
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-brand-purple border-2 border-background-surface animate-ping" />
+            )}
+          </div>
 
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm sm:text-base font-bold text-text-primary">
                 {person.name}
               </h2>
-              <Badge variant={isStreaming ? 'working' : 'available'} size="sm" dot>
-                {isStreaming ? 'Thinking...' : 'Available'}
+              <Badge
+                variant={
+                  presenceState === 'speaking'
+                    ? 'completed'
+                    : isStreaming
+                    ? 'thinking'
+                    : isRecording
+                    ? 'warning'
+                    : 'available'
+                }
+                size="sm"
+                dot
+              >
+                {presenceState === 'speaking'
+                  ? 'Speaking...'
+                  : isStreaming
+                  ? 'Thinking...'
+                  : isRecording
+                  ? 'Listening...'
+                  : 'Available'}
               </Badge>
             </div>
             <div className="text-xs text-text-muted flex items-center gap-1.5">
               <span className="text-brand-purple-light font-medium">{person.role}</span>
               <span>•</span>
-              <span>{world.name}</span>
+              <span className="text-text-dim flex items-center gap-1">
+                <Volume2 className="w-3 h-3 text-text-muted" />
+                {voiceProfile?.voiceName || 'Voice Enabled'}
+              </span>
             </div>
           </div>
         </div>
 
         {/* Header Action Buttons */}
         <div className="flex items-center gap-1.5">
+          {presenceState === 'speaking' && (
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={Square}
+              onClick={handleStopSpeaking}
+              className="text-xs text-brand-purple-light border-brand-purple/40 bg-brand-purple/10"
+            >
+              Stop Voice
+            </Button>
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            leftIcon={Radio}
+            onClick={voiceConversationDisclosure.onOpen}
+            title="Start interactive voice conversation"
+            className="text-brand-purple-light border-brand-purple/40 bg-gradient-to-r from-brand-purple/10 to-brand-indigo/10 hover:from-brand-purple/20 hover:to-brand-indigo/20 font-bold"
+          >
+            <span>Voice Mode</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            leftIcon={Volume2}
+            onClick={voiceSettingsDisclosure.onOpen}
+            title="Configure Voice"
+            className="hidden sm:inline-flex"
+          >
+            Voice
+          </Button>
+
           <Button
             variant="ghost"
             size="sm"
@@ -318,8 +501,9 @@ export const PersonChatPage: React.FC = () => {
             leftIcon={Sliders}
             onClick={intelligenceDisclosure.onOpen}
             title="Configure Intelligence"
+            className="hidden sm:inline-flex"
           >
-            <span className="hidden sm:inline">Intelligence</span>
+            Intelligence
           </Button>
 
           <Button
@@ -354,7 +538,6 @@ export const PersonChatPage: React.FC = () => {
 
       {/* Messages Scroll Area */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-        {/* Welcome State when conversation is empty */}
         {messages.length === 0 ? (
           <div className="min-h-[50vh] flex flex-col items-center justify-center text-center p-6 space-y-5 animate-fade-in max-w-lg mx-auto">
             <div className="relative">
@@ -373,7 +556,6 @@ export const PersonChatPage: React.FC = () => {
               </p>
             </div>
 
-            {/* Conversation Starter Chips */}
             <div className="w-full space-y-2 pt-2 text-left">
               <span className="text-[11px] font-bold uppercase text-text-muted tracking-wider block text-center">
                 Suggested conversation starters:
@@ -393,14 +575,13 @@ export const PersonChatPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          /* Message List */
           messages.map((msg) => {
             const isUser = msg.role === 'user';
             return (
               <div
                 key={msg.id}
                 className={cn(
-                  'flex items-start gap-3 animate-fade-in',
+                  'flex items-start gap-3 animate-fade-in group',
                   isUser ? 'flex-row-reverse' : 'flex-row',
                 )}
               >
@@ -409,26 +590,38 @@ export const PersonChatPage: React.FC = () => {
                     name={person.name}
                     emoji={personEmoji}
                     size="sm"
-                    className="mt-0.5"
+                    className="mt-0.5 shrink-0"
                   />
                 )}
 
-                <div
-                  className={cn(
-                    'max-w-[85%] sm:max-w-[75%] rounded-3xl p-4 text-xs sm:text-sm leading-relaxed space-y-1.5 shadow-sm font-sans',
-                    isUser
-                      ? 'bg-gradient-to-r from-brand-purple to-brand-indigo text-white rounded-tr-sm'
-                      : 'bg-background-surface border border-border text-text-primary rounded-tl-sm',
-                  )}
-                >
-                  <div className="whitespace-pre-wrap leading-relaxed">
-                    {msg.content || (
-                      <span className="inline-flex items-center gap-1 text-text-muted italic">
-                        <span className="w-1.5 h-1.5 rounded-full bg-brand-purple animate-ping" />
-                        Thinking...
-                      </span>
+                <div className="space-y-1 max-w-[85%] sm:max-w-[75%]">
+                  <div
+                    className={cn(
+                      'rounded-3xl p-4 text-xs sm:text-sm leading-relaxed space-y-1.5 shadow-sm font-sans',
+                      isUser
+                        ? 'bg-gradient-to-r from-brand-purple to-brand-indigo text-white rounded-tr-sm'
+                        : 'bg-background-surface border border-border text-text-primary rounded-tl-sm',
                     )}
+                  >
+                    <div className="whitespace-pre-wrap leading-relaxed">
+                      {msg.content || (
+                        <span className="inline-flex items-center gap-1 text-text-muted italic">
+                          <span className="w-1.5 h-1.5 rounded-full bg-brand-purple animate-ping" />
+                          Thinking...
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  {!isUser && msg.content && (
+                    <div className="flex items-center gap-2 pl-2">
+                      <VoicePlayerButton
+                        text={msg.content}
+                        voiceProfile={voiceProfile}
+                        personName={person.name}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -439,6 +632,36 @@ export const PersonChatPage: React.FC = () => {
 
       {/* Chat Input Bar */}
       <div className="p-3 sm:p-4 rounded-3xl bg-background-surface border border-border shrink-0 shadow-lg space-y-2">
+        {/* Live Microphone Recording Banner */}
+        {isRecording && (
+          <div className="p-2.5 rounded-2xl bg-brand-rose/10 border border-brand-rose/30 flex items-center justify-between animate-fade-in text-xs">
+            <div className="flex items-center gap-2.5">
+              <span className="w-3 h-3 rounded-full bg-brand-rose animate-ping shrink-0" />
+              <span className="font-bold text-brand-rose">Listening to you...</span>
+              <div className="flex items-center gap-0.5">
+                <span
+                  className="w-1 bg-brand-rose rounded-full transition-all"
+                  style={{ height: `${8 + audioLevel * 20}px` }}
+                />
+                <span
+                  className="w-1 bg-brand-rose rounded-full transition-all"
+                  style={{ height: `${12 + audioLevel * 24}px` }}
+                />
+                <span
+                  className="w-1 bg-brand-rose rounded-full transition-all"
+                  style={{ height: `${6 + audioLevel * 16}px` }}
+                />
+              </div>
+            </div>
+            <button
+              onClick={handleToggleMicrophone}
+              className="text-xs font-bold text-brand-rose hover:underline cursor-pointer"
+            >
+              Done speaking
+            </button>
+          </div>
+        )}
+
         <div className="flex items-end gap-2">
           <textarea
             ref={textareaRef}
@@ -446,11 +669,38 @@ export const PersonChatPage: React.FC = () => {
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder={`Talk to ${person.name}... (Press Enter to send)`}
-            disabled={isStreaming}
+            placeholder={
+              isTranscribing
+                ? 'Converting speech to text...'
+                : `Talk to ${person.name}... (or click microphone to speak)`
+            }
+            disabled={isStreaming || isTranscribing}
             className="flex-1 bg-background-elevated text-text-primary text-xs sm:text-sm rounded-2xl border border-border px-4 py-3 placeholder:text-text-dim focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple resize-none font-sans max-h-36 disabled:opacity-60"
             autoFocus
           />
+
+          {/* Microphone Action Button */}
+          <Button
+            variant="outline"
+            size="md"
+            onClick={handleToggleMicrophone}
+            disabled={isStreaming || isTranscribing}
+            className={cn(
+              'rounded-2xl shrink-0 h-11 px-3.5 transition-all',
+              isRecording
+                ? 'bg-brand-rose text-white border-brand-rose hover:bg-rose-600 animate-pulse'
+                : 'text-text-secondary hover:text-text-primary',
+            )}
+            title={isRecording ? 'Stop Recording' : 'Speak with Microphone'}
+          >
+            {isTranscribing ? (
+              <Loader2 className="w-4 h-4 animate-spin text-brand-purple-light" />
+            ) : isRecording ? (
+              <Square className="w-4 h-4 fill-current" />
+            ) : (
+              <Mic className="w-4 h-4" />
+            )}
+          </Button>
 
           {isStreaming ? (
             <Button
@@ -479,7 +729,7 @@ export const PersonChatPage: React.FC = () => {
         </div>
 
         <div className="flex items-center justify-between text-[11px] text-text-dim px-2">
-          <span>Shift + Enter for new line</span>
+          <span>Shift + Enter for new line • Click 🎤 to speak</span>
           <span className="flex items-center gap-1">
             <span
               className={cn(
@@ -491,6 +741,25 @@ export const PersonChatPage: React.FC = () => {
           </span>
         </div>
       </div>
+
+      {/* Voice Configuration Modal */}
+      <ConfigureVoiceModal
+        isOpen={voiceSettingsDisclosure.isOpen}
+        onClose={voiceSettingsDisclosure.onClose}
+        worldId={world.id}
+        personId={person.id}
+        personName={person.name}
+        onVoiceUpdated={(updated) => setVoiceProfile(updated)}
+      />
+
+      {/* Immersive Voice Conversation Modal */}
+      <VoiceConversationModal
+        isOpen={voiceConversationDisclosure.isOpen}
+        onClose={voiceConversationDisclosure.onClose}
+        world={world}
+        person={person}
+        voiceProfile={voiceProfile}
+      />
 
       {/* Configure Intelligence Modal */}
       <ConfigureIntelligenceModal
@@ -510,3 +779,4 @@ export const PersonChatPage: React.FC = () => {
     </div>
   );
 };
+export default PersonChatPage;

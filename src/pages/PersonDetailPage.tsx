@@ -17,15 +17,19 @@ import {
   Plus,
   ArrowRight,
   BookOpen,
+  Volume2,
+  Play,
+  Square,
 } from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
-import { Badge } from '../components/ui/Badge';
+import { Badge, BadgeVariant } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { LoadingState } from '../components/layout/LoadingState';
 import { EditPersonModal } from '../features/people/components/EditPersonModal';
 import { DeletePersonModal } from '../features/people/components/DeletePersonModal';
 import { ConfigureIntelligenceModal } from '../features/intelligence/components/ConfigureIntelligenceModal';
+import { ConfigureVoiceModal } from '../features/voice/components/ConfigureVoiceModal';
 import { MemoryCard } from '../features/memory/components/MemoryCard';
 import { AddMemoryModal } from '../features/memory/components/AddMemoryModal';
 import { EditMemoryModal } from '../features/memory/components/EditMemoryModal';
@@ -41,11 +45,12 @@ import { peopleService } from '../services/peopleService';
 import { memoryService } from '../services/memoryService';
 import { knowledgeService } from '../services/knowledgeService';
 import { permissionService } from '../services/permissionService';
+import { voiceService } from '../services/voiceService';
 import { World, Person } from '../types';
 import { Memory } from '../types/memory';
 import { KnowledgeSource } from '../types/knowledge';
 import { PersonPermissions } from '../types/runtime';
-import { formatDateRelative } from '../lib/utils';
+import { VoiceProfile } from '../types/voice';
 
 export const PersonDetailPage: React.FC = () => {
   const { worldId, personId } = useParams<{ worldId: string; personId: string }>();
@@ -57,6 +62,9 @@ export const PersonDetailPage: React.FC = () => {
   const [memories, setMemories] = useState<Memory[]>([]);
   const [knowledgeList, setKnowledgeList] = useState<KnowledgeSource[]>([]);
   const [permissions, setPermissions] = useState<PersonPermissions | null>(null);
+  const [voiceProfile, setVoiceProfile] = useState<VoiceProfile | null>(null);
+  const [isPreviewingVoice, setIsPreviewingVoice] = useState(false);
+  const [previewAudio, setPreviewAudio] = useState<HTMLAudioElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const [selectedMemoryForEdit, setSelectedMemoryForEdit] = useState<Memory | null>(null);
@@ -66,6 +74,7 @@ export const PersonDetailPage: React.FC = () => {
   const editDisclosure = useDisclosure(false);
   const deleteDisclosure = useDisclosure(false);
   const intelligenceDisclosure = useDisclosure(false);
+  const voiceDisclosure = useDisclosure(false);
   const addMemoryDisclosure = useDisclosure(false);
   const editMemoryDisclosure = useDisclosure(false);
   const deleteMemoryDisclosure = useDisclosure(false);
@@ -77,20 +86,22 @@ export const PersonDetailPage: React.FC = () => {
     if (!worldId || !personId) return;
     try {
       setIsLoading(true);
-      const [w, p, mems, kList, perms] = await Promise.all([
+      const [w, p, mems, kList, perms, vProfile] = await Promise.all([
         worldService.getWorldById(worldId),
         peopleService.getPerson(worldId, personId),
-        memoryService.getMemories(worldId, { personId }),
+        memoryService.getPersonMemories(worldId, personId),
         knowledgeService.getKnowledgeList(worldId, { personId }),
         permissionService.getPermissions(worldId, personId),
+        voiceService.getPersonVoice(worldId, personId),
       ]);
       setWorld(w);
       setPerson(p);
       setMemories(mems);
       setKnowledgeList(kList);
       setPermissions(perms);
+      setVoiceProfile(vProfile);
     } catch (err) {
-      console.error('Failed to load person profile:', err);
+      console.error('Failed to load person data:', err);
     } finally {
       setIsLoading(false);
     }
@@ -98,14 +109,19 @@ export const PersonDetailPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+    return () => {
+      if (previewAudio) {
+        previewAudio.pause();
+      }
+    };
+  }, [loadData, previewAudio]);
 
   const handleDuplicate = async () => {
-    if (!worldId || !person) return;
+    if (!worldId || !personId || !person) return;
     try {
-      const copy = await peopleService.duplicatePerson(worldId, person.id);
+      const copy = await peopleService.duplicatePerson(worldId, personId);
       if (copy) {
-        toast.success(`Duplicated ${person.name}`, `Created '${copy.name}' with matching configuration.`);
+        toast.success(`Duplicated ${person.name}`, `Created '${copy.name}' successfully.`);
         navigate(`/world/${worldId}/people/${copy.id}`);
       }
     } catch (err) {
@@ -114,23 +130,61 @@ export const PersonDetailPage: React.FC = () => {
     }
   };
 
-  const handleEditMemory = (mem: Memory) => {
-    setSelectedMemoryForEdit(mem);
+  const handlePreviewVoice = async () => {
+    if (!person) return;
+    if (isPreviewingVoice && previewAudio) {
+      previewAudio.pause();
+      setPreviewAudio(null);
+      setIsPreviewingVoice(false);
+      return;
+    }
+
+    setIsPreviewingVoice(true);
+    try {
+      const url = await voiceService.previewVoice(
+        voiceProfile?.voiceId || 'en-US-AvaNeural',
+        voiceProfile?.speakingRate || 1.0,
+        voiceProfile?.pitch || 1.0,
+        `Hello! I'm ${person.name}. I'm ready to collaborate in ${world?.name || 'this world'}.`,
+      );
+      if (url) {
+        const audio = new Audio(url);
+        setPreviewAudio(audio);
+        audio.onended = () => {
+          setIsPreviewingVoice(false);
+          setPreviewAudio(null);
+        };
+        audio.onerror = () => {
+          setIsPreviewingVoice(false);
+          setPreviewAudio(null);
+        };
+        await audio.play();
+      } else {
+        setIsPreviewingVoice(false);
+      }
+    } catch (e) {
+      console.error(e);
+      setIsPreviewingVoice(false);
+    }
+  };
+
+  const handleEditMemory = (memory: Memory) => {
+    setSelectedMemoryForEdit(memory);
     editMemoryDisclosure.onOpen();
   };
 
-  const handleDeleteMemory = (mem: Memory) => {
-    setSelectedMemoryForDelete(mem);
+  const handleDeleteMemory = (memory: Memory) => {
+    setSelectedMemoryForDelete(memory);
     deleteMemoryDisclosure.onOpen();
   };
 
-  const handleDeleteKnowledge = (k: KnowledgeSource) => {
-    setSelectedKnowledgeForDelete(k);
+  const handleDeleteKnowledge = (knowledge: KnowledgeSource) => {
+    setSelectedKnowledgeForDelete(knowledge);
     deleteKnowledgeDisclosure.onOpen();
   };
 
   if (isLoading) {
-    return <LoadingState message="Opening person profile..." />;
+    return <LoadingState message="Loading person profile..." />;
   }
 
   if (!world || !person) {
@@ -143,55 +197,51 @@ export const PersonDetailPage: React.FC = () => {
           Person Not Found
         </h2>
         <p className="text-xs sm:text-sm text-text-secondary max-w-md">
-          This person may have been removed or does not exist in this world.
+          This person doesn't exist in this world or may have been removed.
         </p>
-        <Link to={worldId ? `/world/${worldId}/people` : '/worlds'}>
+        <Link to={`/world/${worldId}`}>
           <Button variant="primary" size="md" leftIcon={ArrowLeft}>
-            Back to People Directory
+            Return to World
           </Button>
         </Link>
       </div>
     );
   }
 
-  const worldIcon = world.icon || world.emoji || '✨';
   const personEmoji = person.avatar?.emoji || person.avatarEmoji || '👤';
 
-  const statusVariant =
-    person.status === 'available'
-      ? 'available'
-      : person.status === 'busy'
-        ? 'working'
-        : person.status === 'away'
-          ? 'thinking'
-          : 'offline';
-
   const statusLabel =
-    person.status === 'available'
-      ? '🟢 Available'
-      : person.status === 'busy'
-        ? '🟡 Busy'
-        : person.status === 'away'
-          ? '🟠 Away'
-          : '⚪ Offline';
+    person.status === 'busy'
+      ? 'Working'
+      : person.status === 'away'
+      ? 'Thinking'
+      : person.status === 'offline'
+      ? 'Offline'
+      : 'Available';
+
+  const statusVariant: BadgeVariant =
+    person.status === 'busy'
+      ? 'working'
+      : person.status === 'away'
+      ? 'thinking'
+      : person.status === 'offline'
+      ? 'offline'
+      : 'available';
 
   const thinkingStyle = person.intelligence?.thinkingStyle || 'Balanced';
-  const initiativeLevel = person.intelligence?.initiativeLevel || 'Suggest things';
+  const initiativeLevel = person.intelligence?.initiativeLevel || 'Task Completion';
   const customInstructions = person.intelligence?.customInstructions;
 
   return (
     <div className="space-y-6 animate-fade-in font-sans pb-12">
       {/* Breadcrumb Navigation */}
-      <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
-        <Link to="/worlds" className="hover:text-text-primary transition-colors font-medium">
-          My Worlds
-        </Link>
-        <span>/</span>
+      <div className="flex items-center gap-2 text-xs text-text-muted">
         <Link
           to={`/world/${world.id}`}
-          className="hover:text-text-primary transition-colors font-semibold flex items-center gap-1"
+          className="hover:text-text-primary transition-colors font-medium flex items-center gap-1"
         >
-          <span>{worldIcon}</span>
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>{world.icon || world.emoji || '✨'}</span>
           <span>{world.name}</span>
         </Link>
         <span>/</span>
@@ -214,7 +264,7 @@ export const PersonDetailPage: React.FC = () => {
                 name={person.name}
                 emoji={personEmoji}
                 size="xl"
-                status={person.status === 'busy' ? 'working' : person.status === 'away' ? 'thinking' : person.status}
+                status={statusVariant}
               />
             </div>
 
@@ -343,13 +393,13 @@ export const PersonDetailPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Reference Knowledge Section */}
+          {/* Personal Knowledge Library */}
           <Card className="p-6 space-y-4">
             <CardHeader className="p-0 flex flex-row items-center justify-between">
               <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-brand-cyan" />
                 <CardTitle className="text-sm font-bold text-text-primary">
-                  Reference Knowledge ({knowledgeList.length})
+                  Personal Knowledge & Reference ({knowledgeList.length})
                 </CardTitle>
               </div>
               <div className="flex items-center gap-2">
@@ -358,7 +408,7 @@ export const PersonDetailPage: React.FC = () => {
                     to={`/world/${world.id}/people/${person.id}/knowledge`}
                     className="text-xs text-brand-cyan hover:underline font-semibold flex items-center gap-1"
                   >
-                    View library ({knowledgeList.length}) <ArrowRight className="w-3 h-3" />
+                    View all ({knowledgeList.length}) <ArrowRight className="w-3 h-3" />
                   </Link>
                 )}
                 <Button
@@ -376,7 +426,7 @@ export const PersonDetailPage: React.FC = () => {
               {knowledgeList.length === 0 ? (
                 <div className="p-5 rounded-2xl bg-background-elevated/60 border border-border/80 text-center space-y-2">
                   <p className="text-xs text-text-muted">
-                    No reference documents assigned to {person.name} yet. Add guides, catalogs, or notes.
+                    No personal reference materials uploaded for {person.name}. Upload specific guides or notes tailored to this person's role.
                   </p>
                   <Button
                     variant="outline"
@@ -389,10 +439,10 @@ export const PersonDetailPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {knowledgeList.slice(0, 4).map((k) => (
+                  {knowledgeList.slice(0, 4).map((item) => (
                     <KnowledgeCard
-                      key={k.id}
-                      knowledge={k}
+                      key={item.id}
+                      knowledge={item}
                       worldId={world.id}
                       onDelete={handleDeleteKnowledge}
                     />
@@ -402,39 +452,35 @@ export const PersonDetailPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Personality & Communication */}
+          {/* Personality Traits */}
           <Card className="p-6 space-y-4">
             <CardHeader className="p-0">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-brand-purple-light" />
                 <CardTitle className="text-sm font-bold text-text-primary">
-                  Personality & Communication Style
+                  Personality & Tone
                 </CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="p-0 space-y-3 text-xs">
-              {person.personality?.communicationStyle && person.personality.communicationStyle.length > 0 && (
+            <CardContent className="p-0">
+              {person.personality?.traits && person.personality.traits.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {person.personality.communicationStyle.map((st) => (
+                  {person.personality.traits.map((trait: string, i: number) => (
                     <span
-                      key={st}
-                      className="px-3 py-1 rounded-xl bg-brand-purple/20 text-brand-purple-light font-semibold border border-brand-purple/30"
+                      key={i}
+                      className="px-3 py-1.5 rounded-xl bg-brand-purple/10 border border-brand-purple/20 text-xs font-semibold text-brand-purple-light"
                     >
-                      {st}
+                      {trait}
                     </span>
                   ))}
                 </div>
-              )}
-
-              {person.personality?.description && (
-                <div className="p-3.5 rounded-2xl bg-background-elevated border border-border text-text-secondary leading-relaxed font-sans italic">
-                  "{person.personality.description}"
-                </div>
+              ) : (
+                <p className="text-xs text-text-muted italic">No personality traits configured.</p>
               )}
             </CardContent>
           </Card>
 
-          {/* Key Responsibilities */}
+          {/* Responsibilities */}
           <Card className="p-6 space-y-4">
             <CardHeader className="p-0">
               <div className="flex items-center gap-2">
@@ -493,8 +539,77 @@ export const PersonDetailPage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Right 1 Column: Permissions, Intelligence, Skills, Interests */}
+        {/* Right 1 Column: Voice, Permissions, Intelligence, Skills */}
         <div className="space-y-6">
+          {/* Voice & Presence Card */}
+          <Card className="p-6 space-y-4 border-brand-purple/30 bg-gradient-to-b from-brand-purple/10 to-transparent shadow-card-subtle">
+            <CardHeader className="p-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Volume2 className="w-4 h-4 text-brand-purple-light" />
+                  <CardTitle className="text-sm font-bold text-text-primary">
+                    Voice & Presence
+                  </CardTitle>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  leftIcon={Sliders}
+                  onClick={voiceDisclosure.onOpen}
+                >
+                  Configure
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0 space-y-3 text-xs">
+              <p className="text-text-secondary leading-relaxed">
+                Choose how {person.name} sounds when speaking responses.
+              </p>
+
+              {voiceProfile && (
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-background-elevated border border-border">
+                    <span className="text-text-muted">Voice:</span>
+                    <span className="font-bold text-text-primary">{voiceProfile.voiceName}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-background-elevated border border-border">
+                    <span className="text-text-muted">Speaking Speed:</span>
+                    <span className="font-bold text-brand-purple-light">
+                      {voiceProfile.speakingRate.toFixed(1)}x
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-background-elevated border border-border">
+                    <span className="text-text-muted">Auto-speak in chat:</span>
+                    <span className={voiceProfile.autoSpeak ? 'text-brand-emerald font-bold' : 'text-text-dim font-bold'}>
+                      {voiceProfile.autoSpeak ? 'Enabled' : 'Disabled'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={isPreviewingVoice ? Square : Play}
+                  onClick={handlePreviewVoice}
+                  className="flex-1"
+                >
+                  {isPreviewingVoice ? 'Stop' : 'Preview Voice'}
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={Volume2}
+                  onClick={voiceDisclosure.onOpen}
+                  className="flex-1"
+                >
+                  Change Voice
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Permissions & World Actions Card */}
           <Card className="p-6 space-y-4 border-brand-cyan/30 bg-gradient-to-b from-brand-cyan/10 to-transparent shadow-card-subtle">
             <CardHeader className="p-0">
@@ -562,7 +677,7 @@ export const PersonDetailPage: React.FC = () => {
           </Card>
 
           {/* Intelligence & Brain */}
-          <Card className="p-6 space-y-4 border-brand-purple/30 bg-gradient-to-b from-brand-purple/10 to-transparent shadow-card-subtle">
+          <Card className="p-6 space-y-4 border-border/80 bg-background-surface shadow-card-subtle">
             <CardHeader className="p-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -650,46 +765,60 @@ export const PersonDetailPage: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-text-muted italic">No skills listed.</p>
+                <p className="text-xs text-text-muted italic">No skills listed yet.</p>
               )}
             </CardContent>
           </Card>
 
           {/* Interests */}
-          {person.interests && person.interests.length > 0 && (
-            <Card className="p-6 space-y-4">
-              <CardHeader className="p-0">
-                <div className="flex items-center gap-2">
-                  <Compass className="w-4 h-4 text-brand-purple-light" />
-                  <CardTitle className="text-sm font-bold text-text-primary">
-                    Personal Interests
-                  </CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
+          <Card className="p-6 space-y-4">
+            <CardHeader className="p-0">
+              <div className="flex items-center gap-2">
+                <Compass className="w-4 h-4 text-brand-emerald" />
+                <CardTitle className="text-sm font-bold text-text-primary">
+                  Domain Interests
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {person.interests && person.interests.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {person.interests.map((it, i) => (
                     <span
                       key={i}
-                      className="px-2.5 py-1 rounded-xl bg-background-deep border border-border text-xs text-text-muted"
+                      className="px-2.5 py-1 rounded-xl bg-background-elevated border border-border text-xs text-text-primary font-medium"
                     >
                       {it}
                     </span>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Profile Metadata */}
-          <div className="text-[11px] text-text-dim px-1 space-y-1">
-            <div>Created {formatDateRelative(person.createdAt)}</div>
-            <div>Last updated {formatDateRelative(person.updatedAt)}</div>
-          </div>
+              ) : (
+                <p className="text-xs text-text-muted italic">No interests configured yet.</p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
       {/* Modals */}
+      <ConfigureVoiceModal
+        isOpen={voiceDisclosure.isOpen}
+        onClose={voiceDisclosure.onClose}
+        worldId={world.id}
+        personId={person.id}
+        personName={person.name}
+        onVoiceUpdated={(updated) => setVoiceProfile(updated)}
+      />
+
+      <ConfigurePermissionsModal
+        isOpen={permissionsDisclosure.isOpen}
+        onClose={permissionsDisclosure.onClose}
+        worldId={world.id}
+        personId={person.id}
+        personName={person.name}
+        onUpdated={loadData}
+      />
+
       <EditPersonModal
         isOpen={editDisclosure.isOpen}
         onClose={editDisclosure.onClose}
@@ -701,13 +830,17 @@ export const PersonDetailPage: React.FC = () => {
         isOpen={deleteDisclosure.isOpen}
         onClose={deleteDisclosure.onClose}
         person={person}
+        onPersonDeleted={() => navigate(`/world/${world.id}/people`)}
       />
 
       <ConfigureIntelligenceModal
         isOpen={intelligenceDisclosure.isOpen}
         onClose={intelligenceDisclosure.onClose}
         person={person}
-        onUpdated={loadData}
+        onUpdated={(updated) => {
+          setPerson(updated);
+          loadData();
+        }}
       />
 
       <AddMemoryModal
@@ -766,15 +899,7 @@ export const PersonDetailPage: React.FC = () => {
           onDeleted={loadData}
         />
       )}
-
-      <ConfigurePermissionsModal
-        isOpen={permissionsDisclosure.isOpen}
-        onClose={permissionsDisclosure.onClose}
-        worldId={world.id}
-        personId={person.id}
-        personName={person.name}
-        onUpdated={loadData}
-      />
     </div>
   );
 };
+export default PersonDetailPage;
