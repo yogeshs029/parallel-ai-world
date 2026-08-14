@@ -273,7 +273,7 @@ export const PersonChatPage: React.FC = () => {
       if (err instanceof Error && err.name === 'AbortError') {
         // Handled as intentional cancellation
       } else {
-        const errorMsg = `${person.name} couldn't respond right now. Please check if the local AI service is running.`;
+        const errorMsg = `${person.name}'s intelligence is temporarily unavailable. Please try again.`;
         setErrorBanner(errorMsg);
         setMessages((prev) =>
           prev.map((msg) =>
@@ -282,7 +282,7 @@ export const PersonChatPage: React.FC = () => {
                   ...msg,
                   content:
                     accumulatedContent ||
-                    "I couldn't complete that thought right now. Please check if the local intelligence service is running.",
+                    `I'm having a brief moment of pause. Please ask me again.`,
                 }
               : msg,
           ),
