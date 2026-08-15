@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 from ...schemas.runtime import RuntimeTask, TaskUpdate, NotificationCreate, EventCreate
+from ...schemas.tools import ToolRequestCreate
 from .repositories import (
     task_repository,
     event_repository,
@@ -12,7 +13,8 @@ from .repositories import (
 from .broadcaster import broadcaster
 from ..llm.service import intelligence_service
 from ..knowledge.retriever import knowledge_retriever
-from ..memory.retriever import memory_retriever
+from ..tools.registry import tool_registry
+from ..tools.executor import tool_executor
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +24,7 @@ class TaskExecutorService:
 
     async def execute_task(self, task: RuntimeTask) -> RuntimeTask:
         """
-        Executes a background task using LLM grounded with person memory & knowledge.
+        Executes a background task using LLM grounded with person memory, knowledge, and tools.
         Produces task result, person-initiated chat message, and user notification.
         """
         logger.info(f"Executing background task [{task.id}]: {task.title}")
@@ -50,12 +52,20 @@ class TaskExecutorService:
         except Exception as e:
             logger.warning(f"Error retrieving knowledge for task {task.id}: {e}")
 
-        # 2. Build task execution prompt
+        # 2. Retrieve available tools for this person in this world
+        caps = tool_executor.get_person_capabilities(task.worldId, task.assignedPersonId or "default")
+        policy = tool_executor.get_world_policy(task.worldId)
+        available_tools = tool_registry.get_available_tools_for_person(caps, policy)
+        tool_names = [t.name for t in available_tools]
+        tool_desc = ", ".join(tool_names) if tool_names else "Basic planning"
+
+        # 3. Build task execution prompt
         prompt = (
             f"You are {person_name}, the {person_role} in this world.\n"
             f"You have been assigned to complete the following task:\n"
             f"Task: {task.title}\n"
             f"Details: {task.description or 'No additional details provided.'}\n"
+            f"Available Tools: {tool_desc}\n"
             f"{knowledge_context}\n\n"
             f"INSTRUCTIONS:\n"
             f"Perform the task thoroughly and return a concise, high-quality result summary in 2 to 3 sentences (under 60 words).\n"
@@ -66,7 +76,7 @@ class TaskExecutorService:
             llm_messages = [{"role": "user", "content": prompt}]
             result_text = await intelligence_service.generate(llm_messages)
             if not result_text or not result_text.strip():
-                result_text = f"Completed work on '{task.title}' according to project requirements."
+                result_text = f"Completed work on '{task.title}' using available tools ({tool_desc})."
             result_text = result_text.strip()
 
             # Update task to completed
@@ -79,7 +89,7 @@ class TaskExecutorService:
                 )
             )
 
-            # 3. Create Person-Initiated Completion Message in Chat History
+            # 4. Create Person-Initiated Completion Message in Chat History
             if task.assignedPersonId:
                 chat_msg = f"I've finished working on '{task.title}'. {result_text}"
                 await conversation_repository.append_message(
@@ -89,7 +99,7 @@ class TaskExecutorService:
                     content=chat_msg,
                 )
 
-            # 4. Create In-App Notification
+            # 5. Create In-App Notification
             notif = await notification_repository.create_notification(
                 NotificationCreate(
                     worldId=task.worldId,
@@ -102,7 +112,7 @@ class TaskExecutorService:
                 )
             )
 
-            # 5. Record Event
+            # 6. Record Event
             await event_repository.create_event(
                 EventCreate(
                     worldId=task.worldId,
@@ -112,7 +122,7 @@ class TaskExecutorService:
                 )
             )
 
-            # 6. Broadcast real-time SSE updates
+            # 7. Broadcast real-time SSE updates
             await broadcaster.broadcast("task_completed", {
                 "taskId": task.id,
                 "worldId": task.worldId,

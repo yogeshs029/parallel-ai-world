@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
+import { WorldShell } from '../components/layout/WorldShell';
 import { DashboardPage } from '../pages/DashboardPage';
 import { WorldsPage } from '../pages/WorldsPage';
 import { WorldDetailPage } from '../pages/WorldDetailPage';
@@ -15,9 +16,12 @@ import { NotificationsPage } from '../pages/NotificationsPage';
 import { PeoplePage } from '../pages/PeoplePage';
 import { ActivityPage } from '../pages/ActivityPage';
 import { SettingsPage } from '../pages/SettingsPage';
+import { PersonCapabilitiesPage } from '../pages/PersonCapabilitiesPage';
+import { WorldToolsSettingsPage } from '../pages/WorldToolsSettingsPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 
 export const router = createBrowserRouter([
+  // ── 1. GLOBAL PARALLEL APPLICATION SHELL ──
   {
     path: '/',
     element: <AppShell />,
@@ -41,42 +45,6 @@ export const router = createBrowserRouter([
       {
         path: 'world',
         element: <Navigate to="/worlds" replace />,
-      },
-      {
-        path: 'world/:worldId',
-        element: <WorldDetailPage />,
-      },
-      {
-        path: 'world/:worldId/memory',
-        element: <WorldMemoryPage />,
-      },
-      {
-        path: 'world/:worldId/knowledge',
-        element: <WorldKnowledgePage />,
-      },
-      {
-        path: 'world/:worldId/knowledge/:knowledgeId',
-        element: <KnowledgeDetailPage />,
-      },
-      {
-        path: 'world/:worldId/people',
-        element: <WorldPeoplePage />,
-      },
-      {
-        path: 'world/:worldId/people/:personId',
-        element: <PersonDetailPage />,
-      },
-      {
-        path: 'world/:worldId/people/:personId/memory',
-        element: <PersonMemoryPage />,
-      },
-      {
-        path: 'world/:worldId/people/:personId/knowledge',
-        element: <PersonKnowledgePage />,
-      },
-      {
-        path: 'world/:worldId/people/:personId/chat',
-        element: <PersonChatPage />,
       },
       {
         path: 'notifications',
@@ -109,6 +77,62 @@ export const router = createBrowserRouter([
       {
         path: '*',
         element: <NotFoundPage />,
+      },
+    ],
+  },
+
+  // ── 2. LIVING WORLD ENVIRONMENT SHELL ──
+  {
+    path: 'world/:worldId',
+    element: <WorldShell />,
+    children: [
+      {
+        index: true,
+        element: <WorldDetailPage />,
+      },
+      {
+        path: 'memory',
+        element: <WorldMemoryPage />,
+      },
+      {
+        path: 'knowledge',
+        element: <WorldKnowledgePage />,
+      },
+      {
+        path: 'knowledge/:knowledgeId',
+        element: <KnowledgeDetailPage />,
+      },
+      {
+        path: 'people',
+        element: <WorldPeoplePage />,
+      },
+      {
+        path: 'people/:personId',
+        element: <PersonDetailPage />,
+      },
+      {
+        path: 'people/:personId/memory',
+        element: <PersonMemoryPage />,
+      },
+      {
+        path: 'people/:personId/knowledge',
+        element: <PersonKnowledgePage />,
+      },
+      {
+        path: 'people/:personId/chat',
+        element: <PersonChatPage />,
+      },
+      {
+        path: 'people/:personId/capabilities',
+        element: <PersonCapabilitiesPage />,
+      },
+      {
+        path: 'settings/tools',
+        element: <WorldToolsSettingsPage />,
+      },
+      {
+        path: 'tools',
+        element: <WorldToolsSettingsPage />,
       },
     ],
   },

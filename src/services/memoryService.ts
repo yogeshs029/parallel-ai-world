@@ -3,82 +3,19 @@ import { API_BASE } from '../lib/apiConfig';
 
 const LOCAL_STORAGE_KEY = 'parallel_ai_memories_v2';
 
-const INITIAL_FALLBACK_MEMORIES: Memory[] = [
-  {
-    id: 'mem-comp-1',
-    worldId: 'world-company',
-    personId: null,
-    scope: 'world',
-    type: 'knowledge',
-    title: 'Business Core',
-    content: 'The company crafts and sells sustainably-sourced, handcrafted solid hardwood furniture.',
-    importance: 'high',
-    confidence: 1.0,
-    source: 'manual',
-    isActive: true,
-    createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'mem-comp-2',
-    worldId: 'world-company',
-    personId: null,
-    scope: 'world',
-    type: 'fact',
-    title: 'Quality Warranty',
-    content: 'All handcrafted dining tables and furniture include a lifetime structural warranty.',
-    importance: 'medium',
-    confidence: 1.0,
-    source: 'manual',
-    isActive: true,
-    createdAt: new Date(Date.now() - 25 * 86400000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'mem-maya-1',
-    worldId: 'world-company',
-    personId: 'person-maya',
-    scope: 'person',
-    type: 'responsibility',
-    title: 'Primary Technical Focus',
-    content: 'Maya is responsible for building the company website, Stripe checkout, and inventory tools.',
-    importance: 'critical',
-    confidence: 1.0,
-    source: 'manual',
-    isActive: true,
-    createdAt: new Date(Date.now() - 28 * 86400000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'mem-maya-2',
-    worldId: 'world-company',
-    personId: 'person-maya',
-    scope: 'person',
-    type: 'preference',
-    title: 'Engineering Standards',
-    content: 'Maya prefers clean, modular React and TypeScript architecture with fast load times.',
-    importance: 'high',
-    confidence: 1.0,
-    source: 'manual',
-    isActive: true,
-    createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
-
 function getLocalStore(): Memory[] {
   try {
     const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
   } catch (e) {
     console.warn('Could not read memories from localStorage:', e);
   }
-  return [...INITIAL_FALLBACK_MEMORIES];
+  return [];
 }
 
 function saveLocalStore(memories: Memory[]) {

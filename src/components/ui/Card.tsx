@@ -9,20 +9,21 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 export const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ className, isInteractive = false, variant = 'default', children, ...props }, ref) => {
     const variants = {
-      default:  'bg-white border border-slate-200/80 shadow-sm shadow-slate-200/50',
-      elevated: 'bg-white border border-slate-200 shadow-md shadow-slate-200/60',
-      glass:    'bg-white/80 backdrop-blur-md border border-slate-200/80 shadow-sm',
-      cosmic:   'bg-white border border-slate-200/80 shadow-sm',
-      subtle:   'bg-slate-50/80 border border-slate-200/60',
+      default:  'bg-[#131525]/90 border border-white/[0.08] shadow-lg shadow-black/40 backdrop-blur-md text-text-primary',
+      elevated: 'bg-[#17192C] border border-white/[0.12] shadow-xl shadow-black/50 text-text-primary',
+      glass:    'bg-[#131525]/75 backdrop-blur-xl border border-white/[0.09] shadow-md text-text-primary',
+      cosmic:   'bg-gradient-to-br from-[#16182E] to-[#0F101F] border border-purple-500/25 shadow-purple-900/20 shadow-lg text-text-primary',
+      subtle:   'bg-[#0E0F1A]/80 border border-white/[0.06] text-text-primary',
     };
 
     return (
       <div
         ref={ref}
         className={cn(
-          'rounded-[18px] transition-all duration-200 relative overflow-hidden',
+          'rounded-[20px] transition-all duration-200 relative overflow-hidden',
           variants[variant],
-          isInteractive && 'hover:border-[#007aff]/30 hover:shadow-md hover:-translate-y-0.5 cursor-pointer active:scale-[0.985]',
+          isInteractive &&
+            'hover:border-purple-500/50 hover:shadow-card-hover hover:-translate-y-1 cursor-pointer active:scale-[0.985]',
           className,
         )}
         {...props}
@@ -47,7 +48,7 @@ export const CardTitle = forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTM
   ({ className, children, ...props }, ref) => (
     <h3
       ref={ref}
-      className={cn('text-sm font-bold text-slate-900 tracking-tight', className)}
+      className={cn('text-base font-bold text-text-primary tracking-tight font-sans', className)}
       {...props}
     >
       {children}
@@ -58,7 +59,7 @@ CardTitle.displayName = 'CardTitle';
 
 export const CardDescription = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
   ({ className, children, ...props }, ref) => (
-    <p ref={ref} className={cn('text-xs text-slate-600 leading-relaxed', className)} {...props}>
+    <p ref={ref} className={cn('text-xs text-text-secondary leading-relaxed font-sans', className)} {...props}>
       {children}
     </p>
   ),
@@ -78,7 +79,7 @@ export const CardFooter = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDi
   ({ className, children, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('flex items-center p-4 pt-0 border-t border-slate-100 mt-2', className)}
+      className={cn('flex items-center p-4 pt-0 border-t border-white/[0.06] mt-2', className)}
       {...props}
     >
       {children}

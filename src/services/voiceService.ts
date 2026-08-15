@@ -27,7 +27,7 @@ class VoiceService {
         gender: 'female',
         language: 'en-US',
         description: 'Warm, clear, and empathetic tone.',
-        previewText: "Hi! I'm Maya. It's really great to work with you on our projects.",
+        previewText: 'Hello! I am ready to collaborate and help with your goals.',
         isDefault: true,
       },
       {
@@ -35,8 +35,8 @@ class VoiceService {
         name: 'Professional Male',
         gender: 'male',
         language: 'en-US',
-        description: 'Confident, articulate, and executive tone.',
-        previewText: "Hello, I'm Rahul. Let's focus on high-impact objectives today.",
+        description: 'Confident, articulate, and focused tone.',
+        previewText: 'Hello! Let us focus on our high-impact objectives today.',
       },
     ];
   }
@@ -122,9 +122,9 @@ class VoiceService {
       personId,
       worldId,
       enabled: true,
-      voiceId: personId.includes('rahul') ? 'en-US-AndrewNeural' : 'en-US-AvaNeural',
-      voiceName: personId.includes('rahul') ? 'Professional Male' : 'Warm Female',
-      voiceGender: personId.includes('rahul') ? 'male' : 'female',
+      voiceId: 'en-US-AvaNeural',
+      voiceName: 'Warm Female',
+      voiceGender: 'female',
       language: 'en-US',
       speakingRate: 1.0,
       pitch: 1.0,

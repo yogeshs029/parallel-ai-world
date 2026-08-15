@@ -3,47 +3,7 @@ from typing import Dict
 from datetime import datetime
 from ...schemas.voice import VoiceProfile, VoiceProfileUpdate
 
-INITIAL_PROFILES: Dict[str, VoiceProfile] = {
-    "person-maya": VoiceProfile(
-        personId="person-maya",
-        worldId="world-company",
-        enabled=True,
-        voiceId="en-US-AvaNeural",
-        voiceName="Warm Female",
-        voiceGender="female",
-        language="en-US",
-        speakingRate=1.0,
-        pitch=1.0,
-        volume=1.0,
-        autoSpeak=True,
-    ),
-    "person-rahul": VoiceProfile(
-        personId="person-rahul",
-        worldId="world-company",
-        enabled=True,
-        voiceId="en-US-AndrewNeural",
-        voiceName="Professional Male",
-        voiceGender="male",
-        language="en-US",
-        speakingRate=1.0,
-        pitch=1.0,
-        volume=1.0,
-        autoSpeak=True,
-    ),
-    "person-priya": VoiceProfile(
-        personId="person-priya",
-        worldId="world-company",
-        enabled=True,
-        voiceId="en-IN-NeerjaNeural",
-        voiceName="Indian English Female",
-        voiceGender="female",
-        language="en-IN",
-        speakingRate=1.0,
-        pitch=1.0,
-        volume=1.0,
-        autoSpeak=True,
-    ),
-}
+INITIAL_PROFILES: Dict[str, VoiceProfile] = {}
 
 class VoiceProfileRepository:
     def __init__(self):

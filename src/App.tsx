@@ -16,13 +16,13 @@ import { KnowledgeDetailPage } from './pages/KnowledgeDetailPage';
 import { PersonKnowledgePage } from './pages/PersonKnowledgePage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { PeoplePage } from './pages/PeoplePage';
+import { GoalsListPage } from './pages/GoalsListPage';
 import { ActivityPage } from './pages/ActivityPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { RelationshipGraphPage } from './pages/RelationshipGraphPage';
 import { ConversationsListPage } from './pages/ConversationsListPage';
 import { ConversationDetailPage } from './pages/ConversationDetailPage';
-
 
 export const App: React.FC = () => {
   return (
@@ -48,16 +48,22 @@ export const App: React.FC = () => {
               <Route path="world/:worldId/people/:personId/chat" element={<PersonChatPage />} />
 
               <Route path="world/:worldId/relationships" element={<RelationshipGraphPage />} />
+              <Route path="world/:worldId/goals" element={<GoalsListPage />} />
               <Route path="world/:worldId/conversations" element={<ConversationsListPage />} />
               <Route path="world/:worldId/conversations/:conversationId" element={<ConversationDetailPage />} />
 
+              <Route path="goals" element={<GoalsListPage />} />
+              <Route path="conversations" element={<ConversationsListPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="people" element={<PeoplePage />} />
               <Route path="agents" element={<Navigate to="/people" replace />} />
               <Route path="members" element={<Navigate to="/people" replace />} />
 
               <Route path="activity" element={<ActivityPage />} />
-              <Route path="tasks" element={<Navigate to="/worlds" replace />} />
+              <Route path="calendar" element={<ActivityPage />} />
+              <Route path="knowledge" element={<WorldKnowledgePage />} />
+              <Route path="memories" element={<WorldMemoryPage />} />
+              <Route path="tasks" element={<Navigate to="/goals" replace />} />
               <Route path="settings" element={<SettingsPage />} />
 
               <Route path="*" element={<NotFoundPage />} />

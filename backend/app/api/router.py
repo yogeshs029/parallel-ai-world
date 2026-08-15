@@ -1,6 +1,9 @@
+from fastapi import APIRouter
+
 from .endpoints import (
     health,
     chat,
+    worlds,
     memory,
     knowledge,
     runtime,
@@ -14,9 +17,17 @@ from .endpoints import (
     conversations,
     goals,
     plans,
+    tools,
+    experience,
+    dev_reset,
 )
 
 api_router = APIRouter()
+
+api_router.include_router(worlds.router, prefix="", tags=["Worlds"])
+
+# Development Reset (Guarded by ENVIRONMENT)
+api_router.include_router(dev_reset.router, prefix="/dev", tags=["Development"])
 
 api_router.include_router(health.router, prefix="/health", tags=["Health"])
 api_router.include_router(chat.router, prefix="/chat", tags=["Chat"])
@@ -41,3 +52,9 @@ api_router.include_router(conversations.router, prefix="", tags=["P2P Conversati
 # Module 9: Goals & Planning
 api_router.include_router(goals.router, prefix="", tags=["Goals"])
 api_router.include_router(plans.router, prefix="", tags=["Plans"])
+
+# Module 10: Tools & Execution
+api_router.include_router(tools.router, prefix="", tags=["Tools & Execution"])
+
+# Module 11: Living World Experience & Prompt Control
+api_router.include_router(experience.router, prefix="", tags=["World Experience"])

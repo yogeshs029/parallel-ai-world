@@ -94,11 +94,11 @@ export const MemoryDrawer: React.FC<MemoryDrawerProps> = ({
   return (
     <>
       <div
-        className="fixed inset-0 bg-background-deep/70 backdrop-blur-xs z-50 animate-fade-in transition-opacity"
+        className="fixed inset-0 bg-black/85 backdrop-blur-md z-[9998] animate-fade-in transition-opacity"
         onClick={onClose}
       />
 
-      <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[440px] md:w-[480px] bg-background-surface border-l border-border shadow-2xl flex flex-col animate-slide-left font-sans">
+      <div className="fixed inset-y-0 right-0 z-[9999] w-full sm:w-[440px] md:w-[480px] bg-[#121426] border-l border-white/[0.12] shadow-2xl flex flex-col animate-slide-left font-sans">
         {/* Drawer Header */}
         <div className="p-4 sm:p-5 border-b border-border/80 flex items-center justify-between shrink-0 bg-background-surface">
           <div className="flex items-center gap-2.5">

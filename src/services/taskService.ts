@@ -1,9 +1,56 @@
 import { Task, TaskPriority, TaskStatus } from '../types';
 import { RuntimeTask } from '../types/runtime';
 import { API_BASE } from '../lib/apiConfig';
-import { INITIAL_TASKS } from './mockData';
 
-let tasksStore: Task[] = [...INITIAL_TASKS];
+const STORAGE_KEY = 'parallel_ai_tasks_v2';
+
+function getStoredTasks(): Task[] {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        const filtered = parsed.filter(
+          (t) =>
+            t &&
+            t.id &&
+            !t.id.startsWith('task-comp-') &&
+            !t.id.startsWith('task-home-') &&
+            !t.worldId?.startsWith('world-company') &&
+            !t.worldId?.startsWith('world-home'),
+        );
+        if (filtered.length !== parsed.length) {
+          saveStoredTasks(filtered);
+        }
+        return filtered;
+      }
+    }
+  } catch (e) {
+    console.warn('Could not read tasks from localStorage:', e);
+  }
+  return [];
+}
+
+function saveStoredTasks(tasks: Task[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  } catch (e) {
+    console.warn('Could not save tasks to localStorage:', e);
+  }
+}
+
+export function deleteAllStoredTasks(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('parallel_ai_tasks');
+    localStorage.removeItem('parallel_tasks');
+    tasksStore = [];
+  } catch (e) {
+    console.warn('Could not clear tasks:', e);
+  }
+}
+
+let tasksStore: Task[] = getStoredTasks();
 
 export const taskService = {
   async getAllTasks(): Promise<Task[]> {
@@ -86,6 +133,7 @@ export const taskService = {
           updatedAt: bt.createdAt,
         };
         tasksStore = [newTask, ...tasksStore];
+        saveStoredTasks(tasksStore);
         return newTask;
       }
     } catch (e) {
@@ -111,6 +159,7 @@ export const taskService = {
     };
 
     tasksStore = [newTask, ...tasksStore];
+    saveStoredTasks(tasksStore);
     return newTask;
   },
 
@@ -122,6 +171,7 @@ export const taskService = {
         status,
         updatedAt: new Date().toISOString(),
       };
+      saveStoredTasks(tasksStore);
       return { ...tasksStore[idx] };
     }
     return null;

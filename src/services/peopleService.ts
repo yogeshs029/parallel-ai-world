@@ -1,29 +1,43 @@
 import { Person, CreatePersonInput, UpdatePersonInput } from '../types';
-import { INITIAL_PEOPLE } from './mockData';
 import { worldService } from './worldService';
 
 const STORAGE_KEY = 'parallel_ai_people_v2';
+
+const LEGACY_PEOPLE_IDS = new Set([
+  'person-maya',
+  'person-rahul',
+  'person-priya',
+  'person-alex',
+  'person-neha',
+  'person-dev-1',
+  'person-dev-2',
+]);
 
 function getStoredPeople(): Person[] {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // Ensure default initial people exist
-        const merged = [...parsed];
-        for (const initP of INITIAL_PEOPLE) {
-          if (!merged.some((p) => p.id === initP.id)) {
-            merged.push(initP);
-          }
+      if (Array.isArray(parsed)) {
+        const filtered = parsed.filter(
+          (p) =>
+            p &&
+            p.id &&
+            !LEGACY_PEOPLE_IDS.has(p.id) &&
+            !p.worldId?.startsWith('world-company') &&
+            !p.worldId?.startsWith('world-home') &&
+            !p.worldId?.startsWith('world-study'),
+        );
+        if (filtered.length !== parsed.length) {
+          saveStoredPeople(filtered);
         }
-        return merged;
+        return filtered;
       }
     }
   } catch (e) {
     console.warn('Could not read people from localStorage:', e);
   }
-  return [...INITIAL_PEOPLE];
+  return [];
 }
 
 function saveStoredPeople(people: Person[]) {
@@ -31,6 +45,17 @@ function saveStoredPeople(people: Person[]) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(people));
   } catch (e) {
     console.warn('Could not save people to localStorage:', e);
+  }
+}
+
+export function deleteAllStoredPeople(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('parallel_ai_people');
+    localStorage.removeItem('parallel_people');
+    peopleStore = [];
+  } catch (e) {
+    console.warn('Could not clear people:', e);
   }
 }
 

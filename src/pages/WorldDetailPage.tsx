@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   Users,
@@ -9,12 +9,14 @@ import {
   Sparkles,
   Plus,
   UserPlus,
-  Globe,
   ArrowRight,
   Brain,
   ShieldAlert,
+  MessageSquare,
+  Settings,
+  Target,
+  SlidersHorizontal,
 } from 'lucide-react';
-import { WorldHeader } from '../features/worlds/components/WorldHeader';
 import { WorldMetrics } from '../features/worlds/components/WorldMetrics';
 import { WorldTaskQueue } from '../features/worlds/components/WorldTaskQueue';
 import { ActivityTimeline } from '../features/dashboard/components/ActivityTimeline';
@@ -25,7 +27,6 @@ import { DeletePersonModal } from '../features/people/components/DeletePersonMod
 import { StartTaskModal } from '../features/worlds/components/StartTaskModal';
 import { EditWorldModal } from '../features/worlds/components/EditWorldModal';
 import { DeleteWorldModal } from '../features/worlds/components/DeleteWorldModal';
-import { CreateWorldModal } from '../features/worlds/components/CreateWorldModal';
 import { MemoryCard } from '../features/memory/components/MemoryCard';
 import { AddMemoryModal } from '../features/memory/components/AddMemoryModal';
 import { EditMemoryModal } from '../features/memory/components/EditMemoryModal';
@@ -35,8 +36,8 @@ import { AddKnowledgeModal } from '../features/knowledge/components/AddKnowledge
 import { DeleteKnowledgeModal } from '../features/knowledge/components/DeleteKnowledgeModal';
 import { ApprovalCard } from '../features/approvals/components/ApprovalCard';
 import { Tabs } from '../components/ui/Tabs';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/layout/LoadingState';
 import { useDisclosure } from '../hooks/useDisclosure';
@@ -52,11 +53,9 @@ import { World, Person, Task, ActivityLog } from '../types';
 import { Memory } from '../types/memory';
 import { KnowledgeSource } from '../types/knowledge';
 import { ApprovalRequest } from '../types/runtime';
-import { formatDateRelative } from '../lib/utils';
 
 export const WorldDetailPage: React.FC = () => {
   const { worldId } = useParams<{ worldId: string }>();
-  const navigate = useNavigate();
   const toast = useToast();
 
   const [world, setWorld] = useState<World | null>(null);
@@ -82,7 +81,6 @@ export const WorldDetailPage: React.FC = () => {
   const startTaskDisclosure = useDisclosure(false);
   const editWorldDisclosure = useDisclosure(false);
   const deleteWorldDisclosure = useDisclosure(false);
-  const createWorldDisclosure = useDisclosure(false);
   const addMemoryDisclosure = useDisclosure(false);
   const editMemoryDisclosure = useDisclosure(false);
   const deleteMemoryDisclosure = useDisclosure(false);
@@ -136,18 +134,6 @@ export const WorldDetailPage: React.FC = () => {
 
   useEffect(() => {
     loadWorldData();
-
-    const handleTaskCompleted = () => {
-      loadWorldData();
-    };
-
-    window.addEventListener('parallel:task_completed', handleTaskCompleted);
-    window.addEventListener('parallel:approval_requested', handleTaskCompleted);
-
-    return () => {
-      window.removeEventListener('parallel:task_completed', handleTaskCompleted);
-      window.removeEventListener('parallel:approval_requested', handleTaskCompleted);
-    };
   }, [loadWorldData]);
 
   const handleEditPerson = (person: Person) => {
@@ -206,114 +192,138 @@ export const WorldDetailPage: React.FC = () => {
         </div>
 
         <div className="min-h-[50vh] flex flex-col items-center justify-center text-center p-6 space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-background-elevated border border-border flex items-center justify-center text-3xl">
-            🌍
-          </div>
-          <h2 className="text-xl sm:text-2xl font-bold text-text-primary">
-            World Not Found
-          </h2>
-          <p className="text-xs sm:text-sm text-text-secondary max-w-md">
-            The world you're looking for doesn't exist or may have been removed.
-          </p>
-          <div className="flex items-center gap-3 pt-2">
-            <Button
-              variant="outline"
-              size="md"
-              leftIcon={Globe}
-              onClick={() => navigate('/worlds')}
-            >
-              Browse My Worlds
-            </Button>
-            <Button
-              variant="primary"
-              size="md"
-              leftIcon={Plus}
-              onClick={createWorldDisclosure.onOpen}
-            >
-              Create a World
-            </Button>
-          </div>
+          <h2 className="text-xl font-bold text-white">World Not Found</h2>
+          <Link to="/worlds">
+            <Button variant="primary" size="md" leftIcon={ArrowLeft}>Browse My Worlds</Button>
+          </Link>
         </div>
-
-        <CreateWorldModal
-          isOpen={createWorldDisclosure.isOpen}
-          onClose={createWorldDisclosure.onClose}
-          onWorldCreated={() => navigate('/worlds')}
-        />
       </div>
     );
   }
 
-  const icon = world.icon || world.emoji || '✨';
+  const icon = world.icon || world.emoji || '🌐';
+  const coverImg = (world as unknown as { coverImg?: string }).coverImg || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80';
 
   const tabs = [
-    {
-      id: 'overview',
-      label: 'Overview',
-      icon: Sparkles,
-    },
-    {
-      id: 'people',
-      label: 'People',
-      badge: people.length,
-      icon: Users,
-    },
-    {
-      id: 'tasks',
-      label: 'Tasks & Projects',
-      badge: tasks.length,
-      icon: CheckSquare,
-    },
-    {
-      id: 'knowledge',
-      label: 'Knowledge',
-      badge: knowledgeList.length,
-      icon: BookOpen,
-    },
-    {
-      id: 'activity',
-      label: 'Activity Log',
-      badge: activities.length,
-      icon: Activity,
-    },
+    { id: 'overview', label: 'Overview', icon: Sparkles },
+    { id: 'people', label: 'People', badge: people.length, icon: Users },
+    { id: 'tasks', label: 'Goals & Tasks', badge: tasks.length, icon: CheckSquare },
+    { id: 'knowledge', label: 'Knowledge Base', badge: knowledgeList.length, icon: BookOpen },
+    { id: 'memory', label: 'Memory', badge: memories.length, icon: Brain },
+    { id: 'activity', label: 'Activity Log', badge: activities.length, icon: Activity },
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in font-sans">
-      {/* Breadcrumb Navigation */}
+    <div className="space-y-6 animate-fade-in font-sans pb-12">
+      {/* ── BREADCRUMB ── */}
       <div className="flex items-center gap-2 text-xs text-text-muted">
         <Link
           to="/worlds"
-          className="flex items-center gap-1 hover:text-text-primary transition-colors font-medium"
+          className="flex items-center gap-1 hover:text-purple-300 transition-colors font-semibold"
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> All Worlds
+          <ArrowLeft className="w-3.5 h-3.5" /> Worlds
         </Link>
         <span>/</span>
-        <span className="text-text-primary font-semibold flex items-center gap-1">
+        <span className="text-white font-bold flex items-center gap-1.5">
           <span>{icon}</span>
           <span>{world.name}</span>
         </span>
       </div>
 
-      {/* World Command Header */}
-      <WorldHeader
-        world={world}
-        onAddAgentClick={addPersonDisclosure.onOpen}
-        onStartTaskClick={startTaskDisclosure.onOpen}
-        onEditWorldClick={editWorldDisclosure.onOpen}
-        onDeleteWorldClick={deleteWorldDisclosure.onOpen}
-      />
+      {/* ── IMMERSIVE HERO COVER BANNER ── */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-[#121426] shadow-2xl">
+        {/* Cover Photo Backdrop */}
+        <div className="relative h-48 sm:h-56 w-full overflow-hidden">
+          <img
+            src={coverImg}
+            alt={world.name}
+            className="w-full h-full object-cover opacity-60"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#121426] via-[#121426]/60 to-transparent" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.3),transparent_70%)] pointer-events-none" />
 
-      {/* World Summary Counters */}
+          {/* Status badge top right */}
+          <div className="absolute top-4 right-4">
+            <Badge variant="working" size="md" dot pulse>
+              {world.status || 'Active World'}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Banner Content Container */}
+        <div className="p-6 sm:p-8 -mt-16 sm:-mt-20 relative z-10 space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div className="flex items-end gap-4">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-tr from-purple-600 to-indigo-600 border-4 border-[#121426] shadow-2xl flex items-center justify-center text-3xl sm:text-4xl text-white shrink-0">
+                {icon}
+              </div>
+              <div className="space-y-1">
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                  {world.name}
+                </h1>
+                <p className="text-xs sm:text-sm text-text-secondary line-clamp-2 max-w-xl font-sans">
+                  {world.description || 'An intelligent world where AI agents collaborate.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Banner Quick Actions */}
+            <div className="flex flex-wrap items-center gap-2.5 pt-2 sm:pt-0">
+              <Link to="/conversations">
+                <Button variant="primary" size="md" leftIcon={MessageSquare} className="shadow-purple-glow cursor-pointer">
+                  Chat in World
+                </Button>
+              </Link>
+              <Button
+                variant="secondary"
+                size="md"
+                leftIcon={UserPlus}
+                onClick={addPersonDisclosure.onOpen}
+                className="bg-white/[0.08] border-white/[0.12] hover:bg-white/[0.15] cursor-pointer text-xs"
+              >
+                Add Person
+              </Button>
+              <Button
+                variant="secondary"
+                size="md"
+                leftIcon={Target}
+                onClick={startTaskDisclosure.onOpen}
+                className="bg-white/[0.08] border-white/[0.12] hover:bg-white/[0.15] cursor-pointer text-xs"
+              >
+                New Goal
+              </Button>
+              <Link to={`/world/${world.id}/settings/tools`}>
+                <Button
+                  variant="secondary"
+                  size="md"
+                  leftIcon={SlidersHorizontal}
+                  className="bg-purple-600/20 border-purple-500/30 text-purple-200 hover:bg-purple-600/30 cursor-pointer text-xs font-bold"
+                >
+                  Tool Policy
+                </Button>
+              </Link>
+              <button
+                onClick={editWorldDisclosure.onOpen}
+                className="w-10 h-10 rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-text-muted hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                title="World Settings"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── METRICS SUMMARY CARDS ── */}
       <WorldMetrics world={world} />
 
-      {/* Pending Approvals Banner */}
+      {/* ── PENDING APPROVALS BANNER ── */}
       {approvals.length > 0 && (
-        <div className="space-y-3 p-4 sm:p-5 rounded-3xl bg-brand-amber/10 border border-brand-amber/30">
+        <div className="space-y-3 p-4 sm:p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30">
           <div className="flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 text-brand-amber" />
-            <h3 className="text-sm font-bold text-text-primary">
-              Approval Requests ({approvals.length})
+            <ShieldAlert className="w-4 h-4 text-amber-400" />
+            <h3 className="text-sm font-bold text-white">
+              Pending Approvals ({approvals.length})
             </h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -329,47 +339,37 @@ export const WorldDetailPage: React.FC = () => {
         </div>
       )}
 
-      {/* Content Navigation Tabs */}
+      {/* ── MODULAR TABS NAVIGATION ── */}
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
-      {/* Tab Panels */}
+      {/* ── TAB PANELS ── */}
       <div className="pt-2">
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            {/* Split view: People & Tasks */}
+            {/* Split View: People & Tasks */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* People Section */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-brand-purple-light" />
-                    <h3 className="text-sm font-bold text-text-primary">People in World</h3>
+                    <Users className="w-4 h-4 text-purple-400" />
+                    <h3 className="text-sm font-extrabold text-white">People in {world.name}</h3>
                   </div>
                   {people.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <Link
-                        to={`/world/${world.id}/people`}
-                        className="text-xs text-brand-purple-light hover:underline font-semibold flex items-center gap-1"
-                      >
-                        View all ({people.length}) <ArrowRight className="w-3 h-3" />
-                      </Link>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        leftIcon={UserPlus}
-                        onClick={addPersonDisclosure.onOpen}
-                      >
-                        Add Person
-                      </Button>
-                    </div>
+                    <Link
+                      to={`/world/${world.id}/people`}
+                      className="text-xs text-purple-400 hover:underline font-bold flex items-center gap-1"
+                    >
+                      View all ({people.length}) <ArrowRight className="w-3 h-3" />
+                    </Link>
                   )}
                 </div>
 
                 {people.length === 0 ? (
                   <EmptyState
                     icon={Users}
-                    title="Your world is ready. Now let's give it some people."
-                    description="Add people with roles, personalities and responsibilities to bring this world to life."
+                    title="Your world is ready. Add your first person."
+                    description="Assign personalities, responsibilities, and intelligence to your AI people."
                     actionLabel="Add Person"
                     onAction={addPersonDisclosure.onOpen}
                     actionIcon={UserPlus}
@@ -389,30 +389,29 @@ export const WorldDetailPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Tasks Section */}
+              {/* Tasks & Goals Section */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <CheckSquare className="w-4 h-4 text-brand-emerald" />
-                    <h3 className="text-sm font-bold text-text-primary">Tasks & Projects</h3>
+                    <CheckSquare className="w-4 h-4 text-emerald-400" />
+                    <h3 className="text-sm font-extrabold text-white">Active Goals & Tasks</h3>
                   </div>
-                  {tasks.length > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      leftIcon={Plus}
-                      onClick={startTaskDisclosure.onOpen}
-                    >
-                      Create Task
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    leftIcon={Plus}
+                    onClick={startTaskDisclosure.onOpen}
+                    className="text-xs"
+                  >
+                    New Task
+                  </Button>
                 </div>
 
                 {tasks.length === 0 ? (
                   <EmptyState
                     icon={CheckSquare}
-                    title="Nothing needs to be done yet."
-                    description="Create your first task to assign goals and get your world moving forward."
+                    title="No tasks scheduled."
+                    description="Assign milestones to keep your AI agents working on your goals."
                     actionLabel="Create Task"
                     onAction={startTaskDisclosure.onOpen}
                     actionIcon={Plus}
@@ -426,38 +425,29 @@ export const WorldDetailPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Knowledge & Reference Library Section */}
+            {/* Knowledge Library */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-brand-cyan" />
-                  <h3 className="text-sm font-bold text-text-primary">World Knowledge Library</h3>
+                  <BookOpen className="w-4 h-4 text-cyan-400" />
+                  <h3 className="text-sm font-extrabold text-white">World Knowledge Library</h3>
                 </div>
-                <div className="flex items-center gap-2">
-                  {knowledgeList.length > 0 && (
-                    <Link
-                      to={`/world/${world.id}/knowledge`}
-                      className="text-xs text-brand-cyan hover:underline font-semibold flex items-center gap-1"
-                    >
-                      View all ({knowledgeList.length}) <ArrowRight className="w-3 h-3" />
-                    </Link>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    leftIcon={Plus}
-                    onClick={addKnowledgeDisclosure.onOpen}
-                  >
-                    Add Knowledge
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={Plus}
+                  onClick={addKnowledgeDisclosure.onOpen}
+                  className="text-xs"
+                >
+                  Add Knowledge
+                </Button>
               </div>
 
               {knowledgeList.length === 0 ? (
                 <EmptyState
                   icon={BookOpen}
                   title="Your world is ready to learn."
-                  description="Add documents, notes, product catalogs, or web pages for your people to reference."
+                  description="Upload briefs, guidelines, and manuals for your AI people to reference."
                   actionLabel="Add Knowledge"
                   onAction={addKnowledgeDisclosure.onOpen}
                   actionIcon={Plus}
@@ -476,109 +466,13 @@ export const WorldDetailPage: React.FC = () => {
               )}
             </div>
 
-            {/* World Knowledge & Memory Section */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Brain className="w-4 h-4 text-brand-purple-light" />
-                  <h3 className="text-sm font-bold text-text-primary">World Memory</h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  {memories.length > 0 && (
-                    <Link
-                      to={`/world/${world.id}/memory`}
-                      className="text-xs text-brand-purple-light hover:underline font-semibold flex items-center gap-1"
-                    >
-                      View all ({memories.length}) <ArrowRight className="w-3 h-3" />
-                    </Link>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    leftIcon={Plus}
-                    onClick={addMemoryDisclosure.onOpen}
-                  >
-                    Add Memory
-                  </Button>
-                </div>
-              </div>
-
-              {memories.length === 0 ? (
-                <EmptyState
-                  icon={Brain}
-                  title="No world memories recorded yet."
-                  description="Save key facts, decisions, and guidelines that belong to everyone in this world."
-                  actionLabel="Add First Memory"
-                  onAction={addMemoryDisclosure.onOpen}
-                  actionIcon={Plus}
-                />
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {memories.slice(0, 3).map((mem) => (
-                    <MemoryCard
-                      key={mem.id}
-                      memory={mem}
-                      onEdit={handleEditMemory}
-                      onDelete={handleDeleteMemory}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* World Details & Info Card */}
-            <Card className="p-5">
-              <CardHeader className="p-0 pb-3">
-                <CardTitle className="text-sm font-bold text-text-primary">
-                  World Overview
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0 space-y-3 text-xs">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-background-elevated/70 border border-border">
-                  <div>
-                    <span className="text-[11px] text-text-muted block">World Type</span>
-                    <span className="font-bold text-text-primary capitalize">{world.type || world.category}</span>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-text-muted block">Created Date</span>
-                    <span className="font-bold text-text-primary">{formatDateRelative(world.createdAt)}</span>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-text-muted block">Status</span>
-                    <span className="font-bold text-emerald-400 capitalize">{world.status || 'Active'}</span>
-                  </div>
-                </div>
-
-                {world.promptDescription && (
-                  <div className="p-3 rounded-xl bg-background-deep text-xs text-text-secondary border border-border">
-                    <span className="text-[10px] font-bold text-text-muted uppercase block mb-0.5">
-                      World Vision Prompt:
-                    </span>
-                    "{world.promptDescription}"
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Activity Stream Section */}
+            {/* Recent Activity Stream */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-brand-cyan" />
-                <h3 className="text-sm font-bold text-text-primary">Recent Activity</h3>
+                <Activity className="w-4 h-4 text-purple-400" />
+                <h3 className="text-sm font-extrabold text-white">Recent Activity in {world.name}</h3>
               </div>
-
-              {activities.length === 0 ? (
-                <EmptyState
-                  icon={Activity}
-                  title="Your world is quiet for now."
-                  description="Things will appear here as your world comes to life and people start completing tasks."
-                />
-              ) : (
-                <ActivityTimeline
-                  activities={activities}
-                  title={`Activity in ${world.name}`}
-                />
-              )}
+              <ActivityTimeline activities={activities} title={`Activity in ${world.name}`} />
             </div>
           </div>
         )}
@@ -586,12 +480,13 @@ export const WorldDetailPage: React.FC = () => {
         {activeTab === 'people' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-text-primary">All People in {world.name}</h3>
+              <h3 className="text-base font-extrabold text-white">All People in {world.name}</h3>
               <Button
                 variant="primary"
                 size="sm"
                 leftIcon={UserPlus}
                 onClick={addPersonDisclosure.onOpen}
+                className="shadow-purple-glow cursor-pointer"
               >
                 Add Person
               </Button>
@@ -623,85 +518,82 @@ export const WorldDetailPage: React.FC = () => {
         )}
 
         {activeTab === 'tasks' && (
-          <div>
-            {tasks.length === 0 ? (
-              <EmptyState
-                icon={CheckSquare}
-                title="Nothing needs to be done yet."
-                description="Create your first task to start organizing projects."
-                actionLabel="Create Task"
-                onAction={startTaskDisclosure.onOpen}
-                actionIcon={Plus}
-              />
-            ) : (
-              <WorldTaskQueue
-                tasks={tasks}
-                onStartTaskClick={startTaskDisclosure.onOpen}
-              />
-            )}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-extrabold text-white">Goals & Tasks Queue</h3>
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={Plus}
+                onClick={startTaskDisclosure.onOpen}
+                className="shadow-purple-glow cursor-pointer"
+              >
+                Create Task
+              </Button>
+            </div>
+            <WorldTaskQueue
+              tasks={tasks}
+              onStartTaskClick={startTaskDisclosure.onOpen}
+            />
           </div>
         )}
 
         {activeTab === 'knowledge' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-text-primary">World Knowledge Library ({knowledgeList.length})</h3>
-              <div className="flex items-center gap-2">
-                <Link to={`/world/${world.id}/knowledge`}>
-                  <Button variant="outline" size="sm" rightIcon={ArrowRight}>
-                    Open Library Directory
-                  </Button>
-                </Link>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  leftIcon={Plus}
-                  onClick={addKnowledgeDisclosure.onOpen}
-                >
-                  Add Knowledge
-                </Button>
-              </div>
+              <h3 className="text-base font-extrabold text-white">Knowledge Library ({knowledgeList.length})</h3>
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={Plus}
+                onClick={addKnowledgeDisclosure.onOpen}
+                className="shadow-purple-glow cursor-pointer"
+              >
+                Add Knowledge
+              </Button>
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {knowledgeList.map((item) => (
+                <KnowledgeCard
+                  key={item.id}
+                  knowledge={item}
+                  worldId={world.id}
+                  onDelete={handleDeleteKnowledge}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
-            {knowledgeList.length === 0 ? (
-              <EmptyState
-                icon={BookOpen}
-                title="No knowledge documents in this world yet."
-                description="Add company handbooks, product catalogs, or notes to provide reference data to all people in this world."
-                actionLabel="Add Knowledge"
-                onAction={addKnowledgeDisclosure.onOpen}
-                actionIcon={Plus}
-              />
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {knowledgeList.map((item) => (
-                  <KnowledgeCard
-                    key={item.id}
-                    knowledge={item}
-                    worldId={world.id}
-                    onDelete={handleDeleteKnowledge}
-                  />
-                ))}
-              </div>
-            )}
+        {activeTab === 'memory' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-extrabold text-white">World Memories ({memories.length})</h3>
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={Plus}
+                onClick={addMemoryDisclosure.onOpen}
+                className="shadow-purple-glow cursor-pointer"
+              >
+                Add Memory
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {memories.map((mem) => (
+                <MemoryCard
+                  key={mem.id}
+                  memory={mem}
+                  onEdit={handleEditMemory}
+                  onDelete={handleDeleteMemory}
+                />
+              ))}
+            </div>
           </div>
         )}
 
         {activeTab === 'activity' && (
-          <div>
-            {activities.length === 0 ? (
-              <EmptyState
-                icon={Activity}
-                title="Your world is quiet for now."
-                description="Things will appear here as your world comes to life."
-              />
-            ) : (
-              <ActivityTimeline
-                activities={activities}
-                title={`Activity Stream for ${world.name}`}
-              />
-            )}
-          </div>
+          <ActivityTimeline activities={activities} title={`Activity Log for ${world.name}`} />
         )}
       </div>
 
@@ -817,3 +709,5 @@ export const WorldDetailPage: React.FC = () => {
     </div>
   );
 };
+
+export default WorldDetailPage;

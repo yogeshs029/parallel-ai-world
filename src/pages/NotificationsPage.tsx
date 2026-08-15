@@ -10,6 +10,7 @@ import {
   Trash2,
   Clock,
   Inbox,
+  ArrowLeft,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -21,10 +22,10 @@ import { Notification, NotificationType } from '../types/runtime';
 import { formatDateRelative, cn } from '../lib/utils';
 
 const TYPE_ICONS: Record<NotificationType, { icon: React.FC<{ className?: string }>; color: string }> = {
-  task_completed: { icon: CheckCircle2, color: 'text-brand-emerald' },
-  person_message: { icon: MessageSquare, color: 'text-brand-purple-light' },
-  approval_required: { icon: ShieldAlert, color: 'text-brand-amber' },
-  world_update: { icon: Globe, color: 'text-brand-cyan' },
+  task_completed: { icon: CheckCircle2, color: 'text-emerald-400' },
+  person_message: { icon: MessageSquare, color: 'text-purple-300' },
+  approval_required: { icon: ShieldAlert, color: 'text-amber-400' },
+  world_update: { icon: Globe, color: 'text-cyan-400' },
   system: { icon: Bell, color: 'text-text-muted' },
 };
 
@@ -103,18 +104,18 @@ export const NotificationsPage: React.FC = () => {
     <div className="space-y-6 animate-fade-in font-sans pb-12 max-w-4xl mx-auto">
       {/* Breadcrumbs */}
       <div className="flex items-center gap-2 text-xs text-text-muted">
-        <Link to="/worlds" className="hover:text-text-primary transition-colors font-medium">
-          My Worlds
+        <Link to="/worlds" className="hover:text-purple-300 transition-colors font-medium flex items-center gap-1">
+          <ArrowLeft className="w-3.5 h-3.5" /> Worlds
         </Link>
         <span>/</span>
-        <span className="text-text-primary font-bold">Notifications</span>
+        <span className="text-white font-bold">Notifications</span>
       </div>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border/80">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-white/[0.08]">
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary font-sans">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white font-sans">
               Notifications
             </h1>
             {unreadCount > 0 && (
@@ -124,7 +125,7 @@ export const NotificationsPage: React.FC = () => {
             )}
           </div>
           <p className="text-xs sm:text-sm text-text-secondary">
-            Live updates, background task completions, and person messages from all your worlds.
+            Live updates, background task completions, and agent messages from all your worlds.
           </p>
         </div>
 
@@ -134,7 +135,7 @@ export const NotificationsPage: React.FC = () => {
             size="sm"
             leftIcon={CheckCheck}
             onClick={handleMarkAllRead}
-            className="shrink-0 self-start sm:self-auto"
+            className="shrink-0 self-start sm:self-auto cursor-pointer"
           >
             Mark all as read
           </Button>
@@ -142,14 +143,14 @@ export const NotificationsPage: React.FC = () => {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 bg-background-surface p-1 rounded-2xl border border-border w-fit">
+      <div className="flex items-center gap-2 bg-[#121426] p-1 rounded-2xl border border-white/[0.08] w-fit">
         <button
           onClick={() => setActiveTab('unread')}
           className={cn(
             'px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2',
             activeTab === 'unread'
-              ? 'bg-brand-purple text-white shadow-xs'
-              : 'text-text-muted hover:text-text-primary',
+              ? 'bg-purple-600 text-white shadow-purple-glow'
+              : 'text-text-muted hover:text-white',
           )}
         >
           <span>Unread</span>
@@ -163,12 +164,12 @@ export const NotificationsPage: React.FC = () => {
           className={cn(
             'px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2',
             activeTab === 'all'
-              ? 'bg-brand-purple text-white shadow-xs'
-              : 'text-text-muted hover:text-text-primary',
+              ? 'bg-purple-600 text-white shadow-purple-glow'
+              : 'text-text-muted hover:text-white',
           )}
         >
           <span>All</span>
-          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-background-elevated">
+          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[#181A2F]">
             {notifications.length}
           </span>
         </button>
@@ -194,6 +195,7 @@ export const NotificationsPage: React.FC = () => {
             return (
               <Card
                 key={notif.id}
+                variant="glass"
                 onClick={() => {
                   if (notif.actionUrl) {
                     if (!notif.read) {
@@ -203,16 +205,16 @@ export const NotificationsPage: React.FC = () => {
                   }
                 }}
                 className={cn(
-                  'p-4 sm:p-5 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:border-brand-purple/40',
+                  'p-4 sm:p-5 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:border-purple-500/50',
                   !notif.read
-                    ? 'bg-background-elevated/90 border-brand-purple/30 shadow-xs'
-                    : 'bg-background-surface opacity-80 hover:opacity-100',
+                    ? 'bg-[#181A2F]/90 border-purple-500/40 shadow-sm'
+                    : 'bg-[#121426] opacity-85 hover:opacity-100',
                 )}
               >
                 <div className="flex items-start gap-3.5">
                   <div
                     className={cn(
-                      'p-2.5 rounded-2xl bg-background-surface border border-border flex items-center justify-center shrink-0 mt-0.5',
+                      'p-2.5 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center shrink-0 mt-0.5',
                       typeConfig.color,
                     )}
                   >
@@ -221,17 +223,17 @@ export const NotificationsPage: React.FC = () => {
 
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <h4 className="text-xs sm:text-sm font-bold text-text-primary">
+                      <h4 className="text-xs sm:text-sm font-bold text-white">
                         {notif.title}
                       </h4>
                       {!notif.read && (
-                        <span className="w-2 h-2 rounded-full bg-brand-purple-light shrink-0" />
+                        <span className="w-2 h-2 rounded-full bg-purple-400 shrink-0" />
                       )}
                     </div>
                     <p className="text-xs text-text-secondary line-clamp-2 leading-relaxed">
                       {notif.message}
                     </p>
-                    <span className="text-[11px] text-text-dim flex items-center gap-1 pt-0.5">
+                    <span className="text-[11px] text-text-muted flex items-center gap-1 pt-0.5">
                       <Clock className="w-3 h-3" />
                       {formatDateRelative(notif.createdAt)}
                     </span>
@@ -245,6 +247,7 @@ export const NotificationsPage: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       onClick={(e) => handleMarkRead(notif.id, e)}
+                      className="text-xs text-purple-300 hover:text-white"
                     >
                       Mark read
                     </Button>
@@ -252,7 +255,7 @@ export const NotificationsPage: React.FC = () => {
 
                   <button
                     onClick={(e) => handleDelete(notif.id, e)}
-                    className="p-1.5 rounded-lg text-text-dim hover:text-brand-rose hover:bg-brand-rose/10 transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg text-text-muted hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
                     title="Remove notification"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -266,3 +269,5 @@ export const NotificationsPage: React.FC = () => {
     </div>
   );
 };
+
+export default NotificationsPage;

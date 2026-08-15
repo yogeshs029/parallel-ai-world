@@ -5,70 +5,7 @@ import uuid
 
 from ...schemas.memory import Memory, MemoryCreate, MemoryUpdate, MemoryScope
 
-INITIAL_MEMORIES: List[Dict[str, Any]] = [
-    # World: My Company
-    {
-        "id": "mem-comp-1",
-        "worldId": "world-company",
-        "personId": None,
-        "scope": "world",
-        "type": "knowledge",
-        "title": "Business Core",
-        "content": "The company crafts and sells sustainably-sourced, handcrafted solid hardwood furniture.",
-        "importance": "high",
-        "confidence": 1.0,
-        "source": "manual",
-        "isActive": True,
-        "createdAt": datetime.utcnow().isoformat(),
-        "updatedAt": datetime.utcnow().isoformat(),
-    },
-    {
-        "id": "mem-comp-2",
-        "worldId": "world-company",
-        "personId": None,
-        "scope": "world",
-        "type": "fact",
-        "title": "Quality Warranty",
-        "content": "All handcrafted dining tables and furniture include a lifetime structural warranty.",
-        "importance": "medium",
-        "confidence": 1.0,
-        "source": "manual",
-        "isActive": True,
-        "createdAt": datetime.utcnow().isoformat(),
-        "updatedAt": datetime.utcnow().isoformat(),
-    },
-    # Person: Maya (Lead Developer)
-    {
-        "id": "mem-maya-1",
-        "worldId": "world-company",
-        "personId": "person-maya",
-        "scope": "person",
-        "type": "responsibility",
-        "title": "Primary Technical Focus",
-        "content": "Maya is responsible for building the company website, Stripe checkout, and inventory tools.",
-        "importance": "critical",
-        "confidence": 1.0,
-        "source": "manual",
-        "isActive": True,
-        "createdAt": datetime.utcnow().isoformat(),
-        "updatedAt": datetime.utcnow().isoformat(),
-    },
-    {
-        "id": "mem-maya-2",
-        "worldId": "world-company",
-        "personId": "person-maya",
-        "scope": "person",
-        "type": "preference",
-        "title": "Engineering Standards",
-        "content": "Maya prefers clean, modular React and TypeScript architecture with fast load times.",
-        "importance": "high",
-        "confidence": 1.0,
-        "source": "manual",
-        "isActive": True,
-        "createdAt": datetime.utcnow().isoformat(),
-        "updatedAt": datetime.utcnow().isoformat(),
-    },
-]
+INITIAL_MEMORIES: List[Dict[str, Any]] = []
 
 class MemoryRepository(ABC):
     @abstractmethod
@@ -110,6 +47,9 @@ class InMemoryMemoryRepository(MemoryRepository):
         self._store: Dict[str, Memory] = {}
         for item in INITIAL_MEMORIES:
             self._store[item["id"]] = Memory(**item)
+
+    def reset(self):
+        self._store.clear()
 
     async def get(self, memory_id: str) -> Optional[Memory]:
         mem = self._store.get(memory_id)

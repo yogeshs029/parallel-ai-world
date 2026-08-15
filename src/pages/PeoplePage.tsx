@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { UserPlus, Users, ArrowUpDown } from 'lucide-react';
-import { PageHeader } from '../components/layout/PageHeader';
+import { UserPlus, Users, Plus } from 'lucide-react';
 import { PersonCard } from '../features/people/components/PersonCard';
 import { CreatePersonModal } from '../features/people/components/CreatePersonModal';
 import { EditPersonModal } from '../features/people/components/EditPersonModal';
@@ -15,17 +14,13 @@ import { peopleService } from '../services/peopleService';
 import { worldService } from '../services/worldService';
 import { Person, World } from '../types';
 
-type SortOption = 'recent' | 'name' | 'role' | 'status';
-
 export const PeoplePage: React.FC = () => {
   const toast = useToast();
   const [people, setPeople] = useState<Person[]>([]);
   const [worlds, setWorlds] = useState<World[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedWorldId, setSelectedWorldId] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<SortOption>('recent');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<'all' | 'active' | 'offline'>('all');
 
   const [selectedPersonForEdit, setSelectedPersonForEdit] = useState<Person | null>(null);
   const [selectedPersonForDelete, setSelectedPersonForDelete] = useState<Person | null>(null);
@@ -41,8 +36,9 @@ export const PeoplePage: React.FC = () => {
         peopleService.getAllPeople(),
         worldService.getAllWorlds(),
       ]);
-      setPeople(p);
+
       setWorlds(w);
+      setPeople(p);
     } catch (err) {
       console.error('Failed to load people:', err);
     } finally {
@@ -68,7 +64,7 @@ export const PeoplePage: React.FC = () => {
     try {
       const copy = await peopleService.duplicatePerson(person.worldId, person.id);
       if (copy) {
-        toast.success(`Duplicated ${person.name}`, `Created '${copy.name}' with matching configuration.`);
+        toast.success(`Duplicated ${person.name}`, `Created '${copy.name}'.`);
         loadData();
       }
     } catch (err) {
@@ -77,164 +73,89 @@ export const PeoplePage: React.FC = () => {
     }
   };
 
-  const statuses = [
-    { id: 'all', label: 'All Statuses' },
-    { id: 'available', label: '🟢 Available' },
-    { id: 'busy', label: '🟡 Busy' },
-    { id: 'away', label: '🟠 Away' },
-    { id: 'offline', label: '⚪ Offline' },
-  ];
-
-  const filteredAndSortedPeople = useMemo(() => {
+  const filteredPeople = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    let result = people.filter((person) => {
+    return people.filter((person) => {
       const matchesSearch =
         !q ||
         person.name.toLowerCase().includes(q) ||
         person.role.toLowerCase().includes(q) ||
-        (person.worldName && person.worldName.toLowerCase().includes(q)) ||
-        person.description.toLowerCase().includes(q) ||
-        person.skills.some((k) => k.toLowerCase().includes(q)) ||
-        person.responsibilities.some((r) => r.toLowerCase().includes(q));
+        (person.description && person.description.toLowerCase().includes(q));
 
-      const matchesWorld =
-        selectedWorldId === 'all' || person.worldId === selectedWorldId;
-
+      const isOffline = person.status === 'offline';
       const matchesStatus =
-        selectedStatus === 'all' || person.status === selectedStatus;
+        selectedStatusFilter === 'all' ||
+        (selectedStatusFilter === 'active' && !isOffline) ||
+        (selectedStatusFilter === 'offline' && isOffline);
 
-      return matchesSearch && matchesWorld && matchesStatus;
+      return matchesSearch && matchesStatus;
     });
+  }, [people, searchQuery, selectedStatusFilter]);
 
-    result = [...result].sort((a, b) => {
-      if (sortBy === 'name') return a.name.localeCompare(b.name);
-      if (sortBy === 'role') return a.role.localeCompare(b.role);
-      if (sortBy === 'status') return a.status.localeCompare(b.status);
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-
-    return result;
-  }, [people, searchQuery, selectedWorldId, selectedStatus, sortBy]);
-
-  if (isLoading) {
-    return <LoadingState message="Loading people directory..." />;
-  }
-
-  const activeTargetWorldId =
-    selectedWorldId !== 'all' ? selectedWorldId : worlds[0]?.id || 'world-company';
-  const activeTargetWorldName =
-    worlds.find((w) => w.id === activeTargetWorldId)?.name || 'My World';
+  if (isLoading) return <LoadingState message="Loading People directory..." />;
 
   return (
-    <div className="space-y-6 animate-fade-in font-sans">
-      <PageHeader
-        title="People"
-        description="All intelligent people and helpers across your worlds."
-        actions={
+    <div className="space-y-6 animate-fade-in font-sans pb-12">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/[0.08]">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-sans">
+            People
+          </h1>
+          <p className="text-xs sm:text-sm text-text-secondary mt-1">
+            Manage AI agents, teammates, and specialized assistants.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
           <Button
             variant="primary"
             size="md"
-            leftIcon={UserPlus}
+            leftIcon={Plus}
             onClick={createDisclosure.onOpen}
+            className="shadow-purple-glow cursor-pointer"
           >
             Add Person
           </Button>
-        }
-      />
-
-      {/* World & Status Filters */}
-      <div className="space-y-3 pt-1">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          {/* Search Input */}
-          <div className="w-full md:w-80">
-            <Input
-              isSearch
-              placeholder="Search by name, role, skill..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onClear={() => setSearchQuery('')}
-            />
-          </div>
-
-          {/* Sort Dropdown */}
-          <div className="flex items-center gap-2 self-end md:self-auto">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-background-surface border border-border text-xs text-text-secondary">
-              <ArrowUpDown className="w-3.5 h-3.5 text-text-muted" />
-              <span>Sort:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="bg-transparent text-text-primary font-semibold focus:outline-none cursor-pointer"
-              >
-                <option value="recent" className="bg-background-surface">Recently Created</option>
-                <option value="name" className="bg-background-surface">Name</option>
-                <option value="role" className="bg-background-surface">Role</option>
-                <option value="status" className="bg-background-surface">Status</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Filter Pills */}
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          {/* World Filter */}
-          <div className="flex items-center gap-1 bg-background-surface p-1 rounded-xl border border-border overflow-x-auto no-scrollbar">
-            <button
-              onClick={() => setSelectedWorldId('all')}
-              className={`px-3 py-1 text-xs font-medium rounded-lg transition-all cursor-pointer ${
-                selectedWorldId === 'all'
-                  ? 'bg-brand-purple text-white shadow-sm font-semibold'
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              All Worlds ({people.length})
-            </button>
-            {worlds.map((w) => {
-              const count = people.filter((p) => p.worldId === w.id).length;
-              return (
-                <button
-                  key={w.id}
-                  onClick={() => setSelectedWorldId(w.id)}
-                  className={`px-3 py-1 text-xs font-medium rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                    selectedWorldId === w.id
-                      ? 'bg-brand-purple text-white shadow-sm font-semibold'
-                      : 'text-text-secondary hover:text-text-primary'
-                  }`}
-                >
-                  <span>{w.icon || w.emoji}</span>
-                  <span>{w.name} ({count})</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Status Filter */}
-          <div className="flex items-center gap-1 bg-background-surface p-1 rounded-xl border border-border overflow-x-auto no-scrollbar">
-            {statuses.map((st) => (
-              <button
-                key={st.id}
-                onClick={() => setSelectedStatus(st.id)}
-                className={`px-3 py-1 text-xs font-medium rounded-lg transition-all cursor-pointer ${
-                  selectedStatus === st.id
-                    ? 'bg-brand-purple text-white shadow-sm font-semibold'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                {st.label}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
-      {/* People Grid */}
-      {filteredAndSortedPeople.length === 0 ? (
+      {/* Filter Tabs */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {(['all', 'active', 'offline'] as const).map((status) => (
+            <button
+              key={status}
+              onClick={() => setSelectedStatusFilter(status)}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all capitalize cursor-pointer ${
+                selectedStatusFilter === status
+                  ? 'bg-purple-600 text-white shadow-purple-glow'
+                  : 'bg-white/[0.06] text-text-secondary hover:bg-white/[0.1] hover:text-white border border-white/[0.08]'
+              }`}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+
+        <div className="w-full sm:w-64">
+          <Input
+            isSearch
+            placeholder="Search people..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onClear={() => setSearchQuery('')}
+          />
+        </div>
+      </div>
+
+      {/* People Roster Grid */}
+      {filteredPeople.length === 0 ? (
         <EmptyState
           icon={Users}
           title="No people found"
           description={
             searchQuery
-              ? `No one matching "${searchQuery}". Try adjusting your search query or filters.`
+              ? `No one matching "${searchQuery}".`
               : 'Add intelligent people to your worlds to get started.'
           }
           actionLabel="Add Person"
@@ -243,7 +164,7 @@ export const PeoplePage: React.FC = () => {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredAndSortedPeople.map((person) => (
+          {filteredPeople.map((person) => (
             <PersonCard
               key={person.id}
               person={person}
@@ -259,8 +180,8 @@ export const PeoplePage: React.FC = () => {
       <CreatePersonModal
         isOpen={createDisclosure.isOpen}
         onClose={createDisclosure.onClose}
-        worldId={activeTargetWorldId}
-        worldName={activeTargetWorldName}
+        worldId={worlds[0]?.id || 'w-company'}
+        worldName={worlds[0]?.name || 'My World'}
         onPersonCreated={loadData}
       />
 

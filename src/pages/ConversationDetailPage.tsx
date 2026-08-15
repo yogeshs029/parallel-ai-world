@@ -5,7 +5,7 @@ import { Avatar } from '../components/ui/Avatar';
 import { Button } from '../components/ui/Button';
 import { LoadingState } from '../components/layout/LoadingState';
 import { worldService } from '../services/worldService';
-import { peopleService } from '../services/peopleService';
+import { personService } from '../services/personService';
 import { communicationService } from '../services/communicationService';
 import { World, Person } from '../types';
 import { PersonConversation, PersonToPersonMessage } from '../types/communication';
@@ -32,7 +32,7 @@ export const ConversationDetailPage: React.FC = () => {
       setIsLoading(true);
       const [w, pList, conv, msgList] = await Promise.all([
         worldService.getWorldById(worldId),
-        peopleService.getPeople(worldId),
+        personService.getAllPeople(),
         communicationService.getConversationById(worldId, conversationId),
         communicationService.getMessages(conversationId),
       ]);
@@ -59,8 +59,8 @@ export const ConversationDetailPage: React.FC = () => {
 
   if (!world || !conversation) {
     return (
-      <div className="min-h-[50vh] flex flex-col items-center justify-center text-center p-6 space-y-4">
-        <h2 className="text-lg font-bold text-slate-800">Conversation Not Found</h2>
+      <div className="min-h-[50vh] flex flex-col items-center justify-center text-center p-6 space-y-4 font-sans">
+        <h2 className="text-lg font-bold text-white">Conversation Not Found</h2>
         <Link to={`/world/${worldId}/conversations`}>
           <Button variant="primary" size="md" leftIcon={ArrowLeft}>Back to Conversations</Button>
         </Link>
@@ -95,13 +95,13 @@ export const ConversationDetailPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-64px)] max-w-4xl mx-auto font-sans">
+    <div className="flex flex-col h-[calc(100dvh-64px)] max-w-5xl mx-auto font-sans">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 p-3 sm:p-4 bg-white border border-slate-200/80 rounded-2xl shadow-sm mb-3 shrink-0">
+      <div className="flex items-center justify-between gap-3 p-4 bg-[#0F101D] border border-white/[0.08] rounded-3xl shadow-xl mb-3 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <Link
             to={`/world/${world.id}/conversations`}
-            className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-200 transition-colors shrink-0"
+            className="w-9 h-9 rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] flex items-center justify-center text-purple-300 transition-colors shrink-0 cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
@@ -119,16 +119,16 @@ export const ConversationDetailPage: React.FC = () => {
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-sm font-bold text-slate-900 truncate">
+              <h1 className="text-sm font-extrabold text-white truncate">
                 {participants.map((p) => p.name).join(' ↔ ')}
               </h1>
               {conversation.topic && (
-                <span className="cosmos-chip cosmos-chip-blue text-[10px] hidden sm:inline">
+                <span className="cosmos-chip cosmos-chip-purple text-[10px] hidden sm:inline">
                   {conversation.topic}
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-slate-500 truncate">
+            <p className="text-[11px] text-text-muted truncate">
               Exchanges: {conversation.exchangeCount} / 5 budget
             </p>
           </div>
@@ -140,11 +140,11 @@ export const ConversationDetailPage: React.FC = () => {
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/80 rounded-2xl border border-slate-200/60 mb-3">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-[#0B0C14] rounded-3xl border border-white/[0.08] mb-3 custom-scrollbar">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[300px] text-center space-y-2">
-            <MessageCircle className="w-8 h-8 text-slate-300" />
-            <p className="text-sm font-semibold text-slate-700">No messages recorded in this discussion</p>
+            <MessageCircle className="w-8 h-8 text-text-muted" />
+            <p className="text-sm font-semibold text-white">No messages recorded in this discussion</p>
           </div>
         ) : (
           messages.map((msg) => {
@@ -172,18 +172,18 @@ export const ConversationDetailPage: React.FC = () => {
                 )}
 
                 <div className={cn('space-y-1', isCreator ? 'items-end' : 'items-start')}>
-                  <div className="flex items-center gap-2 px-1 text-[10px] text-slate-400">
-                    <span className="font-semibold text-slate-700">{senderName}</span>
+                  <div className="flex items-center gap-2 px-1 text-[10px] text-text-muted">
+                    <span className="font-bold text-white">{senderName}</span>
                     <span>•</span>
                     <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
 
                   <div
                     className={cn(
-                      'p-3 rounded-2xl text-xs leading-relaxed',
+                      'p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed font-sans',
                       isCreator
-                        ? 'bg-[#007aff] text-white rounded-tr-xs shadow-xs'
-                        : 'bg-white border border-slate-200/80 text-slate-800 rounded-tl-xs shadow-xs',
+                        ? 'imessage-bubble-user'
+                        : 'imessage-bubble-ai',
                     )}
                   >
                     {msg.content}
@@ -197,11 +197,11 @@ export const ConversationDetailPage: React.FC = () => {
       </div>
 
       {/* User Intervention Bar */}
-      <form onSubmit={handleUserIntervene} className="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm space-y-2 shrink-0">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-          <ShieldAlert className="w-4 h-4 text-[#007aff]" />
+      <form onSubmit={handleUserIntervene} className="bg-[#0F101D] p-3.5 rounded-3xl border border-white/[0.08] shadow-xl space-y-2 shrink-0">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+          <ShieldAlert className="w-4 h-4 text-purple-400" />
           <span>User Creator Intervention</span>
-          <span className="text-[11px] font-normal text-slate-400">
+          <span className="text-[11px] font-normal text-text-muted">
             (Chime in to steer or resolve this discussion)
           </span>
         </div>
@@ -211,8 +211,8 @@ export const ConversationDetailPage: React.FC = () => {
             type="text"
             value={userInterventionText}
             onChange={(e) => setUserInterventionText(e.target.value)}
-            placeholder="Type instructions or feedback to both people..."
-            className="flex-1 px-3 py-2 cosmos-input text-xs"
+            placeholder="Type instructions or feedback to steer..."
+            className="flex-1 px-4 py-2.5 bg-[#15172A] border border-white/[0.1] rounded-2xl text-xs sm:text-sm text-white placeholder:text-text-muted outline-none focus:border-purple-500/50"
             disabled={isSubmitting}
           />
           <Button
@@ -222,6 +222,7 @@ export const ConversationDetailPage: React.FC = () => {
             leftIcon={Send}
             isLoading={isSubmitting}
             disabled={!userInterventionText.trim()}
+            className="shadow-purple-glow cursor-pointer"
           >
             Intervene
           </Button>

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../components/ui/Card';
+import { useTheme } from '../../../hooks/useTheme';
 
 export const DisplaySettings: React.FC = () => {
-  const [theme, setTheme] = useState('dark');
+  const { theme, setTheme, isDark } = useTheme();
   const [animations, setAnimations] = useState(true);
   const [notifications, setNotifications] = useState(true);
 
@@ -18,21 +19,31 @@ export const DisplaySettings: React.FC = () => {
         <div className="flex items-center justify-between p-3 rounded-xl bg-background-elevated border border-border">
           <div>
             <div className="text-xs font-bold text-text-primary">Color Theme</div>
-            <div className="text-[11px] text-text-muted">Currently using custom dark mode</div>
+            <div className="text-[11px] text-text-muted">
+              {isDark ? 'Currently in Cosmic Dark theme' : 'Currently in Clean Light theme'}
+            </div>
           </div>
           <div className="flex items-center gap-1 bg-background-deep p-1 rounded-lg border border-border">
             <button
               onClick={() => setTheme('dark')}
-              className={`px-3 py-1 text-xs rounded-md font-medium transition-all ${
-                theme === 'dark' ? 'bg-brand-purple text-white' : 'text-text-muted'
+              className={`px-3 py-1 text-xs rounded-md font-medium transition-all cursor-pointer ${
+                theme === 'dark' ? 'bg-brand-purple text-white shadow-sm' : 'text-text-muted hover:text-text-primary'
               }`}
             >
               Dark
             </button>
             <button
+              onClick={() => setTheme('light')}
+              className={`px-3 py-1 text-xs rounded-md font-medium transition-all cursor-pointer ${
+                theme === 'light' ? 'bg-brand-purple text-white shadow-sm' : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              Light
+            </button>
+            <button
               onClick={() => setTheme('system')}
-              className={`px-3 py-1 text-xs rounded-md font-medium transition-all ${
-                theme === 'system' ? 'bg-brand-purple text-white' : 'text-text-muted'
+              className={`px-3 py-1 text-xs rounded-md font-medium transition-all cursor-pointer ${
+                theme === 'system' ? 'bg-brand-purple text-white shadow-sm' : 'text-text-muted hover:text-text-primary'
               }`}
             >
               System

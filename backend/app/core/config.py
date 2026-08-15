@@ -6,6 +6,9 @@ class Settings(BaseSettings):
     API_PREFIX: str = "/api"
     PROJECT_NAME: str = "Parallel AI World Backend"
     
+    # Environment Mode ('development' | 'production' | 'test')
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+
     # LLM Provider Configuration ("ollama" for local dev, "cloudflare" for production)
     LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "ollama")
 

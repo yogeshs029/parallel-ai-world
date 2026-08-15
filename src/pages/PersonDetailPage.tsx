@@ -10,17 +10,17 @@ import {
   Sparkles,
   ShieldCheck,
   Shield,
-  Code,
-  Compass,
   MessageSquare,
   Sliders,
   Plus,
-  ArrowRight,
   BookOpen,
   Volume2,
   Play,
   Square,
   Users,
+  Flame,
+  Radio,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
 import { Badge, BadgeVariant } from '../components/ui/Badge';
@@ -31,6 +31,7 @@ import { EditPersonModal } from '../features/people/components/EditPersonModal';
 import { DeletePersonModal } from '../features/people/components/DeletePersonModal';
 import { ConfigureIntelligenceModal } from '../features/intelligence/components/ConfigureIntelligenceModal';
 import { ConfigureVoiceModal } from '../features/voice/components/ConfigureVoiceModal';
+import { VoiceConversationModal } from '../features/voice/components/VoiceConversationModal';
 import { MemoryCard } from '../features/memory/components/MemoryCard';
 import { AddMemoryModal } from '../features/memory/components/AddMemoryModal';
 import { EditMemoryModal } from '../features/memory/components/EditMemoryModal';
@@ -48,7 +49,6 @@ import { knowledgeService } from '../services/knowledgeService';
 import { permissionService } from '../services/permissionService';
 import { voiceService } from '../services/voiceService';
 import { relationshipService } from '../services/relationshipService';
-import { communicationService } from '../services/communicationService';
 import { AddRelationshipModal } from '../features/relationships/components/AddRelationshipModal';
 import { World, Person } from '../types';
 import { Memory } from '../types/memory';
@@ -56,8 +56,6 @@ import { KnowledgeSource } from '../types/knowledge';
 import { PersonPermissions } from '../types/runtime';
 import { VoiceProfile } from '../types/voice';
 import { Relationship } from '../types/relationship';
-import { PersonConversation } from '../types/communication';
-
 
 export const PersonDetailPage: React.FC = () => {
   const { worldId, personId } = useParams<{ worldId: string; personId: string }>();
@@ -72,7 +70,6 @@ export const PersonDetailPage: React.FC = () => {
   const [voiceProfile, setVoiceProfile] = useState<VoiceProfile | null>(null);
   const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [allPeople, setAllPeople] = useState<Person[]>([]);
-  const [conversations, setConversations] = useState<PersonConversation[]>([]);
   const [isPreviewingVoice, setIsPreviewingVoice] = useState(false);
   const [previewAudio, setPreviewAudio] = useState<HTMLAudioElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -85,6 +82,7 @@ export const PersonDetailPage: React.FC = () => {
   const deleteDisclosure = useDisclosure(false);
   const intelligenceDisclosure = useDisclosure(false);
   const voiceDisclosure = useDisclosure(false);
+  const voiceCallDisclosure = useDisclosure(false);
   const addMemoryDisclosure = useDisclosure(false);
   const editMemoryDisclosure = useDisclosure(false);
   const deleteMemoryDisclosure = useDisclosure(false);
@@ -97,7 +95,7 @@ export const PersonDetailPage: React.FC = () => {
     if (!worldId || !personId) return;
     try {
       setIsLoading(true);
-      const [w, p, pList, mems, kList, perms, vProfile, rels, convs] = await Promise.all([
+      const [w, p, pList, mems, kList, perms, vProfile, rels] = await Promise.all([
         worldService.getWorldById(worldId),
         peopleService.getPerson(worldId, personId),
         peopleService.getPeople(worldId),
@@ -106,7 +104,6 @@ export const PersonDetailPage: React.FC = () => {
         permissionService.getPermissions(worldId, personId),
         voiceService.getPersonVoice(worldId, personId),
         relationshipService.getPersonRelationships(worldId, personId),
-        communicationService.getConversations(worldId),
       ]);
       setWorld(w);
       setPerson(p);
@@ -116,7 +113,6 @@ export const PersonDetailPage: React.FC = () => {
       setPermissions(perms);
       setVoiceProfile(vProfile);
       setRelationships(rels);
-      setConversations(convs.filter((c: PersonConversation) => c.participantIds.includes(personId)));
     } catch (err) {
       console.error('Failed to load person data:', err);
     } finally {
@@ -207,19 +203,9 @@ export const PersonDetailPage: React.FC = () => {
   if (!world || !person) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center text-center p-6 space-y-4 font-sans">
-        <div className="w-16 h-16 rounded-2xl bg-background-elevated border border-border flex items-center justify-center text-3xl">
-          👤
-        </div>
-        <h2 className="text-xl sm:text-2xl font-bold text-text-primary">
-          Person Not Found
-        </h2>
-        <p className="text-xs sm:text-sm text-text-secondary max-w-md">
-          This person doesn't exist in this world or may have been removed.
-        </p>
+        <h2 className="text-xl font-bold text-white">Person Not Found</h2>
         <Link to={`/world/${worldId}`}>
-          <Button variant="primary" size="md" leftIcon={ArrowLeft}>
-            Return to World
-          </Button>
+          <Button variant="primary" size="md" leftIcon={ArrowLeft}>Return to World</Button>
         </Link>
       </div>
     );
@@ -246,8 +232,7 @@ export const PersonDetailPage: React.FC = () => {
       : 'available';
 
   const thinkingStyle = person.intelligence?.thinkingStyle || 'Balanced';
-  const initiativeLevel = person.intelligence?.initiativeLevel || 'Task Completion';
-  const customInstructions = person.intelligence?.customInstructions;
+  const initiativeLevel = person.intelligence?.initiativeLevel || 'Suggest things';
 
   return (
     <div className="space-y-6 animate-fade-in font-sans pb-12">
@@ -255,26 +240,26 @@ export const PersonDetailPage: React.FC = () => {
       <div className="flex items-center gap-2 text-xs text-text-muted">
         <Link
           to={`/world/${world.id}`}
-          className="hover:text-text-primary transition-colors font-medium flex items-center gap-1"
+          className="hover:text-purple-300 transition-colors font-medium flex items-center gap-1"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>{world.icon || world.emoji || '✨'}</span>
+          <span>{world.icon || world.emoji || '🌐'}</span>
           <span>{world.name}</span>
         </Link>
         <span>/</span>
         <Link
           to={`/world/${world.id}/people`}
-          className="hover:text-text-primary transition-colors font-medium"
+          className="hover:text-purple-300 transition-colors font-medium"
         >
           People
         </Link>
         <span>/</span>
-        <span className="text-text-primary font-bold">{person.name}</span>
+        <span className="text-white font-bold">{person.name}</span>
       </div>
 
-      {/* Main Profile Header Card */}
-      <div className="relative overflow-hidden rounded-3xl border border-border bg-background-surface p-6 sm:p-8 shadow-card-subtle">
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+      {/* ── AGENT HERO PROFILE BANNER ── */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-gradient-to-r from-[#121426] via-[#16182E] to-[#0F101E] p-6 sm:p-8 shadow-2xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div className="flex flex-col sm:flex-row sm:items-center gap-5">
             <div className="relative">
               <Avatar
@@ -287,38 +272,62 @@ export const PersonDetailPage: React.FC = () => {
 
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-text-primary font-sans">
+                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white font-sans">
                   {person.name}
                 </h1>
                 <Badge variant={statusVariant} size="sm" dot>
                   {statusLabel}
                 </Badge>
+                {person.explicitMode && (
+                  <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold flex items-center gap-1">
+                    <Flame className="w-3 h-3 text-rose-400 fill-rose-400" /> Explicit Mode ON
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center gap-2 text-xs font-semibold">
-                <span className="text-brand-purple-light">{person.role}</span>
-                <span className="text-border">•</span>
+                <span className="text-purple-300">{person.role}</span>
+                <span className="text-white/20">•</span>
                 <span className="text-text-muted">{world.name}</span>
               </div>
 
-              <p className="text-xs sm:text-sm text-text-secondary max-w-xl leading-relaxed pt-1">
+              <p className="text-xs sm:text-sm text-text-secondary max-w-xl leading-relaxed pt-1 font-sans">
                 {person.description}
               </p>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <Link to={`/world/${world.id}/people/${person.id}/chat`}>
               <Button
                 variant="primary"
                 size="md"
                 leftIcon={MessageSquare}
-                className="shadow-md"
+                className="shadow-purple-glow cursor-pointer"
               >
-                Talk to {person.name}
+                Chat with {person.name}
               </Button>
             </Link>
+            <Link to={`/world/${world.id}/people/${person.id}/capabilities`}>
+              <Button
+                variant="secondary"
+                size="md"
+                leftIcon={SlidersHorizontal}
+                className="bg-purple-600/20 border-purple-500/30 text-purple-200 hover:bg-purple-600/30 cursor-pointer text-xs font-bold"
+              >
+                Capabilities & Tools
+              </Button>
+            </Link>
+            <Button
+              variant="secondary"
+              size="md"
+              leftIcon={Radio}
+              onClick={voiceCallDisclosure.onOpen}
+              className="bg-white/[0.08] border-white/[0.12] hover:bg-white/[0.15] cursor-pointer text-xs"
+            >
+              Voice Call
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -341,39 +350,32 @@ export const PersonDetailPage: React.FC = () => {
               leftIcon={Trash2}
               onClick={deleteDisclosure.onOpen}
             >
-              Remove
+              Delete
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Character Profile Sections Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Columns: Memory, Knowledge, Personality, Responsibilities, Goals */}
-        <div className="lg:col-span-2 space-y-6">
+      {/* ── 2-COLUMN AGENT MANAGEMENT GRID ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column (8 cols): Memory, Knowledge, Personality, Responsibilities, Goals */}
+        <div className="lg:col-span-8 space-y-6">
           {/* Memory Section */}
-          <Card className="p-6 space-y-4">
+          <Card variant="glass" className="p-6 space-y-4 shadow-xl">
             <CardHeader className="p-0 flex flex-row items-center justify-between">
               <div className="flex items-center gap-2">
-                <Brain className="w-4 h-4 text-brand-purple-light" />
-                <CardTitle className="text-sm font-bold text-text-primary">
+                <Brain className="w-4 h-4 text-purple-400" />
+                <CardTitle className="text-sm font-extrabold text-white">
                   {person.name}'s Memory ({memories.length})
                 </CardTitle>
               </div>
               <div className="flex items-center gap-2">
-                {memories.length > 0 && (
-                  <Link
-                    to={`/world/${world.id}/people/${person.id}/memory`}
-                    className="text-xs text-brand-purple-light hover:underline font-semibold flex items-center gap-1"
-                  >
-                    View all ({memories.length}) <ArrowRight className="w-3 h-3" />
-                  </Link>
-                )}
                 <Button
                   variant="outline"
                   size="sm"
                   leftIcon={Plus}
                   onClick={addMemoryDisclosure.onOpen}
+                  className="text-xs"
                 >
                   Add Memory
                 </Button>
@@ -382,9 +384,9 @@ export const PersonDetailPage: React.FC = () => {
 
             <CardContent className="p-0">
               {memories.length === 0 ? (
-                <div className="p-5 rounded-2xl bg-background-elevated/60 border border-border/80 text-center space-y-2">
+                <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center space-y-2">
                   <p className="text-xs text-text-muted">
-                    No memories saved yet. Facts, decisions, and preferences discussed in chat or added manually will be remembered here.
+                    No memories saved yet. Facts, decisions, and preferences discussed in chat will be stored here.
                   </p>
                   <Button
                     variant="outline"
@@ -411,39 +413,30 @@ export const PersonDetailPage: React.FC = () => {
           </Card>
 
           {/* Personal Knowledge Library */}
-          <Card className="p-6 space-y-4">
+          <Card variant="glass" className="p-6 space-y-4 shadow-xl">
             <CardHeader className="p-0 flex flex-row items-center justify-between">
               <div className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-brand-cyan" />
-                <CardTitle className="text-sm font-bold text-text-primary">
-                  Personal Knowledge & Reference ({knowledgeList.length})
+                <BookOpen className="w-4 h-4 text-cyan-400" />
+                <CardTitle className="text-sm font-extrabold text-white">
+                  Personal Knowledge & References ({knowledgeList.length})
                 </CardTitle>
               </div>
-              <div className="flex items-center gap-2">
-                {knowledgeList.length > 0 && (
-                  <Link
-                    to={`/world/${world.id}/people/${person.id}/knowledge`}
-                    className="text-xs text-brand-cyan hover:underline font-semibold flex items-center gap-1"
-                  >
-                    View all ({knowledgeList.length}) <ArrowRight className="w-3 h-3" />
-                  </Link>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  leftIcon={Plus}
-                  onClick={addKnowledgeDisclosure.onOpen}
-                >
-                  Add Knowledge
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={Plus}
+                onClick={addKnowledgeDisclosure.onOpen}
+                className="text-xs"
+              >
+                Add Knowledge
+              </Button>
             </CardHeader>
 
             <CardContent className="p-0">
               {knowledgeList.length === 0 ? (
-                <div className="p-5 rounded-2xl bg-background-elevated/60 border border-border/80 text-center space-y-2">
+                <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center space-y-2">
                   <p className="text-xs text-text-muted">
-                    No personal reference materials uploaded for {person.name}. Upload specific guides or notes tailored to this person's role.
+                    No personal reference materials uploaded for {person.name}. Upload role-specific guides or notes.
                   </p>
                   <Button
                     variant="outline"
@@ -469,125 +462,86 @@ export const PersonDetailPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Personality Traits */}
-          <Card className="p-6 space-y-4">
+          {/* Personality Traits & Communication Style */}
+          <Card variant="glass" className="p-6 space-y-4 shadow-xl">
             <CardHeader className="p-0">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-brand-purple-light" />
-                <CardTitle className="text-sm font-bold text-text-primary">
-                  Personality & Tone
+                <Sparkles className="w-4 h-4 text-purple-400" />
+                <CardTitle className="text-sm font-extrabold text-white">
+                  Personality & Communication Style
                 </CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="p-0">
-              {person.personality?.traits && person.personality.traits.length > 0 ? (
+            <CardContent className="p-0 space-y-3">
+              {person.personality?.traits && person.personality.traits.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {person.personality.traits.map((trait: string, i: number) => (
                     <span
                       key={i}
-                      className="px-3 py-1.5 rounded-xl bg-brand-purple/10 border border-brand-purple/20 text-xs font-semibold text-brand-purple-light"
+                      className="px-3 py-1.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-xs font-bold text-purple-300"
                     >
                       {trait}
                     </span>
                   ))}
                 </div>
-              ) : (
-                <p className="text-xs text-text-muted italic">No personality traits configured.</p>
+              )}
+              {person.personality?.description && (
+                <p className="text-xs text-text-secondary leading-relaxed p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                  {person.personality.description}
+                </p>
               )}
             </CardContent>
           </Card>
 
-          {/* Responsibilities */}
-          <Card className="p-6 space-y-4">
-            <CardHeader className="p-0">
+          {/* Responsibilities & Active Goals */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Card variant="glass" className="p-5 space-y-3">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-brand-emerald" />
-                <CardTitle className="text-sm font-bold text-text-primary">
-                  Responsibilities ({person.responsibilities?.length || 0})
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-white">Responsibilities</h4>
+              </div>
+              <div className="space-y-1.5">
+                {person.responsibilities?.map((r, i) => (
+                  <div key={i} className="p-2 rounded-xl bg-white/[0.03] text-xs text-text-secondary border border-white/[0.06]">
+                    • {r}
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <Card variant="glass" className="p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-purple-400" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-white">Active Goals</h4>
+              </div>
+              <div className="space-y-1.5">
+                {person.goals?.map((g, i) => (
+                  <div key={i} className="p-2 rounded-xl bg-purple-500/10 text-xs text-purple-300 border border-purple-500/20 font-semibold">
+                    🎯 {g}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          {/* Relationships & P2P Discussions */}
+          <Card variant="glass" className="p-6 space-y-4 shadow-xl">
+            <CardHeader className="p-0 flex flex-row items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-purple-400" />
+                <CardTitle className="text-sm font-extrabold text-white">
+                  Relationships ({relationships.length})
                 </CardTitle>
               </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {person.responsibilities && person.responsibilities.length > 0 ? (
-                <div className="space-y-2">
-                  {person.responsibilities.map((r, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-2.5 p-3 rounded-2xl bg-background-elevated/70 border border-border text-xs text-text-primary font-medium"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-brand-emerald shrink-0" />
-                      <span>{r}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-text-muted italic">No responsibilities assigned yet.</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Active Goals */}
-          <Card className="p-6 space-y-4">
-            <CardHeader className="p-0">
-              <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-brand-amber" />
-                <CardTitle className="text-sm font-bold text-text-primary">
-                  Goals & Objectives ({person.goals?.length || 0})
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {person.goals && person.goals.length > 0 ? (
-                <div className="space-y-2">
-                  {person.goals.map((g, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-2.5 p-3 rounded-2xl bg-background-elevated/70 border border-border text-xs text-text-primary font-medium"
-                    >
-                      <span>🎯</span>
-                      <span>{g}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-text-muted italic">No active goals defined yet.</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Relationships Card (Module 8) */}
-          <Card className="p-6 space-y-4">
-            <CardHeader className="p-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-[#007aff]" />
-                  <CardTitle className="text-sm font-bold text-slate-900">
-                    Relationships ({relationships.length})
-                  </CardTitle>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Link
-                    to={`/world/${world.id}/relationships`}
-                    className="text-xs text-[#007aff] hover:underline font-semibold"
-                  >
-                    View Graph
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    leftIcon={Plus}
-                    onClick={addRelDisclosure.onOpen}
-                  >
-                    Add
-                  </Button>
-                </div>
-              </div>
+              <Button variant="outline" size="sm" leftIcon={Plus} onClick={addRelDisclosure.onOpen} className="text-xs">
+                Add Connection
+              </Button>
             </CardHeader>
             <CardContent className="p-0">
               {relationships.length === 0 ? (
-                <p className="text-xs text-slate-400 italic">No relationships connected yet.</p>
+                <p className="text-xs text-text-muted italic">No connections established yet.</p>
               ) : (
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {relationships.map((rel) => {
                     const isOutgoing = rel.fromPersonId === person.id;
                     const otherId = isOutgoing ? rel.toPersonId : rel.fromPersonId;
@@ -597,16 +551,16 @@ export const PersonDetailPage: React.FC = () => {
                     return (
                       <div
                         key={rel.id}
-                        className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200/60 text-xs"
+                        className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] text-xs"
                       >
                         <div className="flex items-center gap-2.5">
                           <Avatar name={other.name} emoji={other.avatar?.emoji || other.avatarEmoji || '👤'} size="sm" />
                           <div>
-                            <div className="font-bold text-slate-900">{other.name}</div>
-                            <div className="text-[10px] text-slate-500">{other.role}</div>
+                            <div className="font-bold text-white">{other.name}</div>
+                            <div className="text-[10px] text-text-muted">{other.role}</div>
                           </div>
                         </div>
-                        <span className="cosmos-chip cosmos-chip-blue text-[10px] capitalize">
+                        <span className="cosmos-chip cosmos-chip-purple text-[10px] capitalize">
                           {isOutgoing ? rel.type.replace('_', ' ') : `Connected (${rel.type.replace('_', ' ')})`}
                         </span>
                       </div>
@@ -616,343 +570,136 @@ export const PersonDetailPage: React.FC = () => {
               )}
             </CardContent>
           </Card>
-
-          {/* Person-to-Person Conversations Card (Module 8) */}
-          <Card className="p-6 space-y-4">
-            <CardHeader className="p-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-[#007aff]" />
-                  <CardTitle className="text-sm font-bold text-slate-900">
-                    P2P Conversations ({conversations.length})
-                  </CardTitle>
-                </div>
-                <Link
-                  to={`/world/${world.id}/conversations`}
-                  className="text-xs text-[#007aff] hover:underline font-semibold"
-                >
-                  View All
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {conversations.length === 0 ? (
-                <p className="text-xs text-slate-400 italic">No internal person conversations yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {conversations.slice(0, 3).map((conv) => {
-                    const otherId = conv.participantIds.find((id) => id !== person.id);
-                    const other = allPeople.find((p) => p.id === otherId);
-
-                    return (
-                      <Link
-                        key={conv.id}
-                        to={`/world/${world.id}/conversations/${conv.id}`}
-                        className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/60 text-xs transition-colors group"
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          {other && (
-                            <Avatar name={other.name} emoji={other.avatar?.emoji || other.avatarEmoji || '👤'} size="sm" />
-                          )}
-                          <div className="min-w-0">
-                            <div className="font-bold text-slate-900 group-hover:text-[#007aff] truncate">
-                              With {other?.name || 'Person'}
-                            </div>
-                            <div className="text-[10px] text-slate-500 truncate">
-                              {conv.topic || 'Discussion'}
-                            </div>
-                          </div>
-                        </div>
-                        <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#007aff]" />
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Right 1 Column: Voice, Permissions, Intelligence, Skills */}
-        <div className="space-y-6">
+        {/* Right Column (4 cols): Voice, Intelligence, Permissions */}
+        <div className="lg:col-span-4 space-y-6">
           {/* Voice & Presence Card */}
-          <Card className="p-6 space-y-4 border-brand-purple/30 bg-gradient-to-b from-brand-purple/10 to-transparent shadow-card-subtle">
-            <CardHeader className="p-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Volume2 className="w-4 h-4 text-brand-purple-light" />
-                  <CardTitle className="text-sm font-bold text-text-primary">
-                    Voice & Presence
-                  </CardTitle>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  leftIcon={Sliders}
-                  onClick={voiceDisclosure.onOpen}
-                >
-                  Configure
-                </Button>
+          <Card variant="glass" className="p-5 space-y-4 border-purple-500/30 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Volume2 className="w-4 h-4 text-purple-400" />
+                <h3 className="text-sm font-extrabold text-white">Voice & Presence</h3>
               </div>
-            </CardHeader>
-            <CardContent className="p-0 space-y-3 text-xs">
-              <p className="text-text-secondary leading-relaxed">
-                Choose how {person.name} sounds when speaking responses.
-              </p>
+              <Button variant="ghost" size="sm" leftIcon={Sliders} onClick={voiceDisclosure.onOpen} className="text-xs">
+                Configure
+              </Button>
+            </div>
 
-              {voiceProfile && (
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-background-elevated border border-border">
-                    <span className="text-text-muted">Voice:</span>
-                    <span className="font-bold text-text-primary">{voiceProfile.voiceName}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-background-elevated border border-border">
-                    <span className="text-text-muted">Speaking Speed:</span>
-                    <span className="font-bold text-brand-purple-light">
-                      {voiceProfile.speakingRate.toFixed(1)}x
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-background-elevated border border-border">
-                    <span className="text-text-muted">Auto-speak in chat:</span>
-                    <span className={voiceProfile.autoSpeak ? 'text-brand-emerald font-bold' : 'text-text-dim font-bold'}>
-                      {voiceProfile.autoSpeak ? 'Enabled' : 'Disabled'}
-                    </span>
-                  </div>
+            <p className="text-xs text-text-secondary leading-relaxed font-sans">
+              Choose how {person.name} sounds when generating audio responses.
+            </p>
+
+            {voiceProfile && (
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#15172A] border border-white/[0.08] text-xs">
+                  <span className="text-text-muted">Voice:</span>
+                  <span className="font-bold text-white">{voiceProfile.voiceName}</span>
                 </div>
-              )}
-
-              <div className="pt-2 flex flex-col sm:flex-row gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  leftIcon={isPreviewingVoice ? Square : Play}
-                  onClick={handlePreviewVoice}
-                  className="flex-1"
-                >
-                  {isPreviewingVoice ? 'Stop' : 'Preview Voice'}
-                </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  leftIcon={Volume2}
-                  onClick={voiceDisclosure.onOpen}
-                  className="flex-1"
-                >
-                  Change Voice
-                </Button>
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#15172A] border border-white/[0.08] text-xs">
+                  <span className="text-text-muted">Speaking Speed:</span>
+                  <span className="font-bold text-purple-300">{voiceProfile.speakingRate.toFixed(1)}x</span>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            )}
 
-          {/* Permissions & World Actions Card */}
-          <Card className="p-6 space-y-4 border-brand-cyan/30 bg-gradient-to-b from-brand-cyan/10 to-transparent shadow-card-subtle">
-            <CardHeader className="p-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-brand-cyan" />
-                  <CardTitle className="text-sm font-bold text-text-primary">
-                    Runtime Permissions
-                  </CardTitle>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  leftIcon={Sliders}
-                  onClick={permissionsDisclosure.onOpen}
-                >
-                  Configure
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0 space-y-3 text-xs">
-              <p className="text-text-secondary leading-relaxed">
-                Controls what {person.name} can do autonomously inside this world.
-              </p>
-
-              {permissions && (
-                <div className="space-y-1.5 pt-1">
-                  <div className="flex items-center justify-between p-2 rounded-xl bg-background-elevated border border-border text-xs">
-                    <span className="text-text-muted">Task management:</span>
-                    <span className={permissions.taskCreate ? 'text-brand-emerald font-bold' : 'text-text-dim font-bold'}>
-                      {permissions.taskCreate ? 'Allowed' : 'Restricted'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded-xl bg-background-elevated border border-border text-xs">
-                    <span className="text-text-muted">Knowledge adding:</span>
-                    <span className={permissions.knowledgeCreate ? 'text-brand-emerald font-bold' : 'text-text-dim font-bold'}>
-                      {permissions.knowledgeCreate ? 'Allowed' : 'Restricted'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded-xl bg-background-elevated border border-border text-xs">
-                    <span className="text-text-muted">World modifications:</span>
-                    <span className={permissions.worldEdit ? 'text-brand-emerald font-bold' : 'text-brand-amber font-bold'}>
-                      {permissions.worldEdit ? 'Direct' : 'Needs Approval'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded-xl bg-background-elevated border border-border text-xs">
-                    <span className="text-text-muted">Proactive messaging:</span>
-                    <span className={permissions.messageUser ? 'text-brand-emerald font-bold' : 'text-text-dim font-bold'}>
-                      {permissions.messageUser ? 'Enabled' : 'Disabled'}
-                    </span>
-                  </div>
-                </div>
-              )}
-
+            <div className="pt-2 flex flex-col sm:flex-row gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                leftIcon={Shield}
-                onClick={permissionsDisclosure.onOpen}
-                className="w-full"
+                leftIcon={isPreviewingVoice ? Square : Play}
+                onClick={handlePreviewVoice}
+                className="flex-1 text-xs"
               >
-                Configure Permissions
+                {isPreviewingVoice ? 'Stop' : 'Preview Voice'}
               </Button>
-            </CardContent>
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={Volume2}
+                onClick={voiceDisclosure.onOpen}
+                className="flex-1 text-xs shadow-purple-glow"
+              >
+                Change Voice
+              </Button>
+            </div>
           </Card>
 
-          {/* Intelligence & Brain */}
-          <Card className="p-6 space-y-4 border-border/80 bg-background-surface shadow-card-subtle">
-            <CardHeader className="p-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Brain className="w-4 h-4 text-brand-purple-light" />
-                  <CardTitle className="text-sm font-bold text-text-primary">
-                    Intelligence & Brain
-                  </CardTitle>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  leftIcon={Sliders}
-                  onClick={intelligenceDisclosure.onOpen}
-                >
-                  Configure
-                </Button>
+          {/* Intelligence & Behavior Card */}
+          <Card variant="glass" className="p-5 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Brain className="w-4 h-4 text-purple-400" />
+                <h3 className="text-sm font-extrabold text-white">Intelligence & Behavior</h3>
               </div>
-            </CardHeader>
-            <CardContent className="p-0 space-y-3 text-xs">
-              <p className="text-text-secondary leading-relaxed">
-                {person.name}'s intelligence determines how she communicates and approaches problems in your world.
-              </p>
+              <Button variant="ghost" size="sm" leftIcon={Sliders} onClick={intelligenceDisclosure.onOpen} className="text-xs">
+                Edit
+              </Button>
+            </div>
 
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-background-elevated border border-border">
-                  <span className="text-text-muted">Thinking style:</span>
-                  <span className="font-bold text-text-primary">{thinkingStyle}</span>
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#15172A] border border-white/[0.08]">
+                <span className="text-text-muted">Thinking Style:</span>
+                <span className="font-bold text-white">{thinkingStyle}</span>
+              </div>
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#15172A] border border-white/[0.08]">
+                <span className="text-text-muted">Initiative Level:</span>
+                <span className="font-bold text-emerald-400">{initiativeLevel}</span>
+              </div>
+            </div>
+          </Card>
+
+          {/* Capabilities & Tools Card */}
+          <Card variant="glass" className="p-5 space-y-3 shadow-xl border-purple-500/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-purple-400" />
+                <h3 className="text-sm font-extrabold text-white">Agent Capabilities</h3>
+              </div>
+              <Link to={`/world/${world.id}/people/${person.id}/capabilities`}>
+                <Button variant="ghost" size="sm" className="text-xs text-purple-300 hover:text-white">
+                  Manage
+                </Button>
+              </Link>
+            </div>
+            <p className="text-xs text-text-secondary leading-relaxed">
+              Configure allowed tools (Web Search, Files, Code Execution, APIs) and approval triggers for {person.name}.
+            </p>
+          </Card>
+
+          {/* Runtime Permissions */}
+          <Card variant="glass" className="p-5 space-y-3 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-cyan-400" />
+                <h3 className="text-sm font-extrabold text-white">Runtime Permissions</h3>
+              </div>
+              <Button variant="ghost" size="sm" leftIcon={Sliders} onClick={permissionsDisclosure.onOpen} className="text-xs">
+                Configure
+              </Button>
+            </div>
+
+            {permissions && (
+              <div className="space-y-1.5 pt-1 text-xs">
+                <div className="flex items-center justify-between p-2 rounded-xl bg-[#15172A] border border-white/[0.06]">
+                  <span className="text-text-muted">Task Management:</span>
+                  <span className={permissions.taskCreate ? 'text-emerald-400 font-bold' : 'text-text-muted font-bold'}>
+                    {permissions.taskCreate ? 'Allowed' : 'Restricted'}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-background-elevated border border-border">
-                  <span className="text-text-muted">Initiative:</span>
-                  <span className="font-bold text-text-primary">{initiativeLevel}</span>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-background-elevated border border-border">
-                  <span className="text-text-muted">Custom guidance:</span>
-                  <span className="font-bold text-text-primary">
-                    {customInstructions ? 'Configured' : 'Default'}
+                <div className="flex items-center justify-between p-2 rounded-xl bg-[#15172A] border border-white/[0.06]">
+                  <span className="text-text-muted">World Modifications:</span>
+                  <span className={permissions.worldEdit ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+                    {permissions.worldEdit ? 'Direct' : 'Needs Approval'}
                   </span>
                 </div>
               </div>
-
-              <div className="pt-2 flex flex-col gap-2">
-                <Link to={`/world/${world.id}/people/${person.id}/chat`} className="w-full">
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    leftIcon={MessageSquare}
-                    className="w-full"
-                  >
-                    Start Conversation
-                  </Button>
-                </Link>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  leftIcon={Sliders}
-                  onClick={intelligenceDisclosure.onOpen}
-                  className="w-full"
-                >
-                  Configure Intelligence
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Skills & Expertise */}
-          <Card className="p-6 space-y-4">
-            <CardHeader className="p-0">
-              <div className="flex items-center gap-2">
-                <Code className="w-4 h-4 text-brand-cyan" />
-                <CardTitle className="text-sm font-bold text-text-primary">
-                  Skills & Expertise
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {person.skills && person.skills.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {person.skills.map((sk, i) => (
-                    <span
-                      key={i}
-                      className="px-2.5 py-1 rounded-xl bg-background-elevated border border-border text-xs text-text-primary font-medium"
-                    >
-                      {sk}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-text-muted italic">No skills listed yet.</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Interests */}
-          <Card className="p-6 space-y-4">
-            <CardHeader className="p-0">
-              <div className="flex items-center gap-2">
-                <Compass className="w-4 h-4 text-brand-emerald" />
-                <CardTitle className="text-sm font-bold text-text-primary">
-                  Domain Interests
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {person.interests && person.interests.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {person.interests.map((it, i) => (
-                    <span
-                      key={i}
-                      className="px-2.5 py-1 rounded-xl bg-background-elevated border border-border text-xs text-text-primary font-medium"
-                    >
-                      {it}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-text-muted italic">No interests configured yet.</p>
-              )}
-            </CardContent>
+            )}
           </Card>
         </div>
       </div>
 
       {/* Modals */}
-      <ConfigureVoiceModal
-        isOpen={voiceDisclosure.isOpen}
-        onClose={voiceDisclosure.onClose}
-        worldId={world.id}
-        personId={person.id}
-        personName={person.name}
-        onVoiceUpdated={(updated) => setVoiceProfile(updated)}
-      />
-
-      <ConfigurePermissionsModal
-        isOpen={permissionsDisclosure.isOpen}
-        onClose={permissionsDisclosure.onClose}
-        worldId={world.id}
-        personId={person.id}
-        personName={person.name}
-        onUpdated={loadData}
-      />
-
       <EditPersonModal
         isOpen={editDisclosure.isOpen}
         onClose={editDisclosure.onClose}
@@ -964,24 +711,37 @@ export const PersonDetailPage: React.FC = () => {
         isOpen={deleteDisclosure.isOpen}
         onClose={deleteDisclosure.onClose}
         person={person}
-        onPersonDeleted={() => navigate(`/world/${world.id}/people`)}
+        onPersonDeleted={() => navigate(`/world/${world.id}`)}
       />
 
       <ConfigureIntelligenceModal
         isOpen={intelligenceDisclosure.isOpen}
         onClose={intelligenceDisclosure.onClose}
         person={person}
-        onUpdated={(updated) => {
-          setPerson(updated);
-          loadData();
-        }}
+        onUpdated={(updated) => setPerson(updated)}
+      />
+
+      <ConfigureVoiceModal
+        isOpen={voiceDisclosure.isOpen}
+        onClose={voiceDisclosure.onClose}
+        worldId={world.id}
+        personId={person.id}
+        personName={person.name}
+        onVoiceUpdated={(updated) => setVoiceProfile(updated)}
+      />
+
+      <VoiceConversationModal
+        isOpen={voiceCallDisclosure.isOpen}
+        onClose={voiceCallDisclosure.onClose}
+        world={world}
+        person={person}
+        voiceProfile={voiceProfile}
       />
 
       <AddMemoryModal
         isOpen={addMemoryDisclosure.isOpen}
         onClose={addMemoryDisclosure.onClose}
         worldId={world.id}
-        worldName={world.name}
         personId={person.id}
         personName={person.name}
         onMemoryCreated={loadData}
@@ -1015,7 +775,6 @@ export const PersonDetailPage: React.FC = () => {
         isOpen={addKnowledgeDisclosure.isOpen}
         onClose={addKnowledgeDisclosure.onClose}
         worldId={world.id}
-        worldName={world.name}
         personId={person.id}
         personName={person.name}
         onKnowledgeCreated={loadData}
@@ -1034,6 +793,15 @@ export const PersonDetailPage: React.FC = () => {
         />
       )}
 
+      <ConfigurePermissionsModal
+        isOpen={permissionsDisclosure.isOpen}
+        onClose={permissionsDisclosure.onClose}
+        worldId={world.id}
+        personId={person.id}
+        personName={person.name}
+        onUpdated={loadData}
+      />
+
       <AddRelationshipModal
         isOpen={addRelDisclosure.isOpen}
         onClose={addRelDisclosure.onClose}
@@ -1045,4 +813,5 @@ export const PersonDetailPage: React.FC = () => {
     </div>
   );
 };
+
 export default PersonDetailPage;

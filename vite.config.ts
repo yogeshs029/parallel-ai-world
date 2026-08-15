@@ -19,6 +19,16 @@ export default defineConfig({
     host: true,
     cors: true,
     proxy: {
+      '/api/ollama': {
+        target: 'http://127.0.0.1:11434',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/ollama/, ''),
+      },
+      '/api/lmstudio': {
+        target: 'http://127.0.0.1:1234',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/lmstudio/, ''),
+      },
       '/api': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,

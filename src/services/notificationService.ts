@@ -3,46 +3,19 @@ import { API_BASE } from '../lib/apiConfig';
 
 const LOCAL_STORAGE_KEY = 'parallel_ai_notifications_v1';
 
-const INITIAL_FALLBACK_NOTIFS: Notification[] = [
-  {
-    id: 'notif-seed-1',
-    userId: 'user-default',
-    worldId: 'world-company',
-    personId: 'person-maya',
-    type: 'task_completed',
-    title: 'Maya completed website research',
-    message: 'Reviewed frontend architecture and outlined key mobile UX enhancements.',
-    read: false,
-    actionUrl: '/world/world-company/people/person-maya/chat',
-    createdAt: new Date(Date.now() - 5 * 60000).toISOString(),
-  },
-  {
-    id: 'notif-seed-2',
-    userId: 'user-default',
-    worldId: 'world-company',
-    personId: 'person-priya',
-    type: 'task_completed',
-    title: 'Priya finished pricing benchmark',
-    message: 'Benchmarked 3 boutique furniture competitors against our 2026 catalog.',
-    read: true,
-    actionUrl: '/world/world-company/people/person-priya/chat',
-    createdAt: new Date(Date.now() - 35 * 60000).toISOString(),
-  },
-];
-
 function getLocalStore(): Notification[] {
   try {
     const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
   } catch (e) {
     console.warn('Could not read notifications from localStorage:', e);
   }
-  return [...INITIAL_FALLBACK_NOTIFS];
+  return [];
 }
 
 function saveLocalStore(items: Notification[]) {

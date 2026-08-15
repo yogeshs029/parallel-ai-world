@@ -1,8 +1,32 @@
 import { ActivityLog, KnowledgeNote } from '../types';
-import { INITIAL_ACTIVITIES, INITIAL_KNOWLEDGE } from './mockData';
 
-let activitiesStore: ActivityLog[] = [...INITIAL_ACTIVITIES];
-let knowledgeStore: KnowledgeNote[] = [...INITIAL_KNOWLEDGE];
+const ACT_KEY = 'parallel_ai_activities_v2';
+const KNOW_KEY = 'parallel_ai_knowledge_notes_v2';
+
+function getStoredActivities(): ActivityLog[] {
+  try {
+    const saved = localStorage.getItem(ACT_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return [];
+}
+
+function getStoredKnowledge(): KnowledgeNote[] {
+  try {
+    const saved = localStorage.getItem(KNOW_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return [];
+}
+
+let activitiesStore: ActivityLog[] = getStoredActivities();
+let knowledgeStore: KnowledgeNote[] = getStoredKnowledge();
 const delay = (ms = 60) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const activityService = {

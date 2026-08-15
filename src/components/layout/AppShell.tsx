@@ -32,7 +32,7 @@ export const AppShell: React.FC = () => {
   }, [searchDisclosure]);
 
   return (
-    <div className="min-h-screen relative text-text-primary selection:bg-brand-purple/40 selection:text-white">
+    <div className="min-h-screen relative text-text-primary selection:bg-purple-600/40 selection:text-white bg-[#0B0C14]">
       {/* 🌌 Universe Starfield Canvas Background */}
       <UniverseStarfield />
 
@@ -47,7 +47,7 @@ export const AppShell: React.FC = () => {
       <div
         className={cn(
           'flex flex-col min-h-screen transition-all duration-300 ease-in-out relative z-10',
-          isSidebarCollapsed ? 'md:pl-20' : 'md:pl-64',
+          isSidebarCollapsed ? 'md:pl-[74px]' : 'md:pl-64',
         )}
       >
         {/* Top Header */}
@@ -57,7 +57,7 @@ export const AppShell: React.FC = () => {
         />
 
         {/* Content Area */}
-        <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-6xl w-full mx-auto pb-24 md:pb-12 animate-fade-in">
+        <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 md:pb-12 animate-fade-in">
           <Outlet />
         </main>
       </div>

@@ -25,11 +25,11 @@ export const Tabs: React.FC<TabsProps> = ({
   variant = 'line',
   className,
 }) => {
-  if (variant === 'segmented') {
+  if (variant === 'segmented' || variant === 'pills') {
     return (
       <div
         className={cn(
-          'inline-flex p-1 bg-background-deep rounded-xl border border-border overflow-x-auto max-w-full no-scrollbar',
+          'inline-flex p-1 bg-[#131525] rounded-2xl border border-white/[0.08] overflow-x-auto max-w-full no-scrollbar gap-1',
           className,
         )}
         role="tablist"
@@ -45,10 +45,10 @@ export const Tabs: React.FC<TabsProps> = ({
               disabled={tab.disabled}
               onClick={() => onChange(tab.id)}
               className={cn(
-                'flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap',
+                'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 whitespace-nowrap cursor-pointer select-none',
                 isActive
-                  ? 'bg-background-elevated text-text-primary shadow-sm border border-border-bright/50'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-background-surface/50',
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-900/30'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.06]',
                 tab.disabled && 'opacity-40 cursor-not-allowed',
               )}
             >
@@ -57,8 +57,8 @@ export const Tabs: React.FC<TabsProps> = ({
               {typeof tab.count === 'number' && (
                 <span
                   className={cn(
-                    'px-1.5 py-0.2 rounded-full text-[10px] font-mono',
-                    isActive ? 'bg-accent-cyan/20 text-accent-cyan' : 'bg-background-card text-text-muted',
+                    'px-2 py-0.5 rounded-full text-[10px] font-mono font-bold',
+                    isActive ? 'bg-white/20 text-white' : 'bg-white/[0.08] text-text-muted',
                   )}
                 >
                   {tab.count}
@@ -74,7 +74,7 @@ export const Tabs: React.FC<TabsProps> = ({
   return (
     <div
       className={cn(
-        'flex border-b border-border space-x-6 overflow-x-auto no-scrollbar',
+        'flex border-b border-white/[0.08] space-x-6 overflow-x-auto no-scrollbar',
         className,
       )}
       role="tablist"
@@ -90,8 +90,8 @@ export const Tabs: React.FC<TabsProps> = ({
             disabled={tab.disabled}
             onClick={() => onChange(tab.id)}
             className={cn(
-              'group relative flex items-center gap-2 pb-3.5 text-sm font-medium transition-colors whitespace-nowrap',
-              isActive ? 'text-accent-cyan' : 'text-text-secondary hover:text-text-primary',
+              'group relative flex items-center gap-2 pb-3.5 text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer select-none',
+              isActive ? 'text-brand-purple-light' : 'text-text-secondary hover:text-text-primary',
               tab.disabled && 'opacity-40 cursor-not-allowed',
             )}
           >
@@ -99,7 +99,7 @@ export const Tabs: React.FC<TabsProps> = ({
               <Icon
                 className={cn(
                   'w-4 h-4 transition-colors',
-                  isActive ? 'text-accent-cyan' : 'text-text-muted group-hover:text-text-secondary',
+                  isActive ? 'text-brand-purple-light' : 'text-text-muted group-hover:text-text-secondary',
                 )}
               />
             )}
@@ -107,8 +107,8 @@ export const Tabs: React.FC<TabsProps> = ({
             {typeof tab.count === 'number' && (
               <span
                 className={cn(
-                  'px-1.5 py-0.5 rounded-full text-[10px] font-mono transition-colors',
-                  isActive ? 'bg-accent-cyan/15 text-accent-cyan' : 'bg-background-elevated text-text-muted',
+                  'px-2 py-0.5 rounded-full text-[10px] font-mono transition-colors font-bold',
+                  isActive ? 'bg-purple-500/20 text-brand-purple-light' : 'bg-white/[0.08] text-text-muted',
                 )}
               >
                 {tab.count}
@@ -116,7 +116,7 @@ export const Tabs: React.FC<TabsProps> = ({
             )}
             {/* Active underline indicator */}
             {isActive && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-cyan shadow-glow-cyan" />
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-purple-light shadow-purple-glow rounded-full" />
             )}
           </button>
         );

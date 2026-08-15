@@ -1,5 +1,5 @@
 import { World, WorldType, CreateWorldInput, UpdateWorldInput, UserStats } from '../types';
-import { INITIAL_WORLDS, INITIAL_USER_STATS } from './mockData';
+import { API_BASE } from '../lib/apiConfig';
 
 const STORAGE_KEY = 'parallel_ai_worlds_v2';
 
@@ -10,26 +10,35 @@ const LEGACY_ID_MAP: Record<string, string> = {
   'world-hyperion-sim': 'world-home',
 };
 
+const LEGACY_DEMO_IDS = new Set([
+  'world-company',
+  'world-home',
+  'world-study',
+  'world-story',
+  'world-romance',
+  'world-nexus-prime',
+  'world-aegis-forge',
+  'world-quantum-lab',
+  'world-hyperion-sim',
+]);
+
 function getStoredWorlds(): World[] {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // Ensure default mock worlds are always present
-        const merged = [...parsed];
-        for (const initW of INITIAL_WORLDS) {
-          if (!merged.some((w) => w.id === initW.id)) {
-            merged.push(initW);
-          }
+      if (Array.isArray(parsed)) {
+        const filtered = parsed.filter((w) => w && w.id && !LEGACY_DEMO_IDS.has(w.id));
+        if (filtered.length !== parsed.length) {
+          saveStoredWorlds(filtered);
         }
-        return merged;
+        return filtered;
       }
     }
   } catch (e) {
     console.warn('Could not read worlds from localStorage:', e);
   }
-  return [...INITIAL_WORLDS];
+  return [];
 }
 
 function saveStoredWorlds(worlds: World[]) {
@@ -40,8 +49,26 @@ function saveStoredWorlds(worlds: World[]) {
   }
 }
 
+export function deleteAllStoredWorlds(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('parallel_ai_worlds');
+    localStorage.removeItem('parallel_worlds');
+    localStorage.removeItem('parallel_ai_worlds_v1');
+    worldsStore = [];
+    statsStore.totalWorlds = 0;
+  } catch (e) {
+    console.warn('Error clearing worlds:', e);
+  }
+}
+
 let worldsStore: World[] = getStoredWorlds();
-let statsStore: UserStats = { ...INITIAL_USER_STATS, totalWorlds: worldsStore.length };
+let statsStore: UserStats = {
+  totalWorlds: worldsStore.length,
+  totalPeople: 0,
+  activeTasks: 0,
+  completedTasks: 0,
+};
 
 const delay = (ms = 30) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -132,10 +159,6 @@ export const worldService = {
       const mappedId = LEGACY_ID_MAP[id];
       found = worldsStore.find((w) => w.id === mappedId);
     }
-    // Check initial worlds fallback
-    if (!found) {
-      found = INITIAL_WORLDS.find((w) => w.id === id);
-    }
     return found ? { ...found } : null;
   },
 
@@ -220,6 +243,103 @@ export const worldService = {
     worldsStore = worldsStore.filter((w) => w.id !== id);
     saveStoredWorlds(worldsStore);
     statsStore.totalWorlds = worldsStore.length;
+
+    // 1. Cascade delete People in this world
+    try {
+      const pRaw = localStorage.getItem('parallel_ai_people_v2');
+      if (pRaw) {
+        const people = JSON.parse(pRaw);
+        if (Array.isArray(people)) {
+          const filtered = people.filter((p: any) => p.worldId !== id);
+          localStorage.setItem('parallel_ai_people_v2', JSON.stringify(filtered));
+        }
+      }
+    } catch (e) {
+      console.warn('Error cascading people deletion:', e);
+    }
+
+    // 2. Cascade delete Tasks in this world
+    try {
+      const tRaw = localStorage.getItem('parallel_ai_tasks_v2');
+      if (tRaw) {
+        const tasks = JSON.parse(tRaw);
+        if (Array.isArray(tasks)) {
+          const filtered = tasks.filter((t: any) => t.worldId !== id);
+          localStorage.setItem('parallel_ai_tasks_v2', JSON.stringify(filtered));
+        }
+      }
+    } catch (e) {
+      console.warn('Error cascading tasks deletion:', e);
+    }
+
+    // 3. Cascade delete Activities in this world
+    try {
+      const aRaw = localStorage.getItem('parallel_ai_activities_v2');
+      if (aRaw) {
+        const acts = JSON.parse(aRaw);
+        if (Array.isArray(acts)) {
+          const filtered = acts.filter((a: any) => a.worldId !== id);
+          localStorage.setItem('parallel_ai_activities_v2', JSON.stringify(filtered));
+        }
+      }
+    } catch (e) {
+      console.warn('Error cascading activities deletion:', e);
+    }
+
+    // 4. Cascade delete Memories in this world
+    try {
+      const mRaw = localStorage.getItem('parallel_ai_memories_v2');
+      if (mRaw) {
+        const mems = JSON.parse(mRaw);
+        if (Array.isArray(mems)) {
+          const filtered = mems.filter((m: any) => m.worldId !== id);
+          localStorage.setItem('parallel_ai_memories_v2', JSON.stringify(filtered));
+        }
+      }
+    } catch (e) {
+      console.warn('Error cascading memories deletion:', e);
+    }
+
+    // 5. Cascade delete Knowledge in this world
+    try {
+      const kRaw = localStorage.getItem('parallel_ai_knowledge_v1');
+      if (kRaw) {
+        const know = JSON.parse(kRaw);
+        if (Array.isArray(know)) {
+          const filtered = know.filter((k: any) => k.worldId !== id);
+          localStorage.setItem('parallel_ai_knowledge_v1', JSON.stringify(filtered));
+        }
+      }
+      localStorage.removeItem(`parallel_ai_knowledge_v1:${id}`);
+    } catch (e) {
+      console.warn('Error cascading knowledge deletion:', e);
+    }
+
+    // 6. Cascade delete Goals, Plans, Relationships, Experience & Versions
+    try {
+      localStorage.removeItem(`parallel_ai_goals_v1:${id}`);
+      localStorage.removeItem(`parallel_ai_plans_v1:${id}`);
+      localStorage.removeItem(`parallel_ai_relationships_v1:${id}`);
+      localStorage.removeItem(`parallel_world_experience_${id}`);
+      localStorage.removeItem(`parallel_world_versions_${id}`);
+    } catch (e) {
+      console.warn('Error cascading specific world keys:', e);
+    }
+
+    // 7. Backend Cascade Call
+    try {
+      await fetch(`${API_BASE}/worlds/${id}`, {
+        method: 'DELETE',
+      });
+    } catch (e) {
+      console.warn('Backend world delete API offline, client cascade completed:', e);
+    }
+
+    // 8. Dispatch notification event for reactive UI updates
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('parallel:world_deleted', { detail: { worldId: id } }));
+    }
+
     return worldsStore.length < initialLen;
   },
 

@@ -22,36 +22,43 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-0">
-        <div className="space-y-2.5">
-          {activities.map((act) => (
-            <div
-              key={act.id}
-              className="flex items-start gap-3 p-3 rounded-2xl bg-background-elevated/70 border border-border hover:border-border-bright transition-all"
-            >
-              <div className="w-8 h-8 rounded-xl bg-background-surface border border-border flex items-center justify-center text-base shrink-0">
-                {act.personEmoji || '👤'}
-              </div>
-              <div className="flex-1 space-y-0.5">
-                <div className="flex flex-wrap items-center justify-between gap-1">
-                  <span className="text-xs font-semibold text-text-primary">
-                    {act.personName || 'Someone'}
-                  </span>
-                  <span className="text-[10px] text-text-muted">
-                    {formatDateRelative(act.timestamp)}
-                  </span>
+        {activities.length === 0 ? (
+          <div className="p-6 text-center text-xs text-text-muted space-y-1">
+            <p className="font-semibold text-text-secondary">No activity yet</p>
+            <p className="text-[11px]">Recent events and tasks will appear here.</p>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {activities.map((act) => (
+              <div
+                key={act.id}
+                className="flex items-start gap-3 p-3 rounded-2xl bg-background-elevated/70 border border-border hover:border-border-bright transition-all"
+              >
+                <div className="w-8 h-8 rounded-xl bg-background-surface border border-border flex items-center justify-center text-base shrink-0">
+                  {act.personEmoji || '👤'}
                 </div>
-                <p className="text-xs text-text-secondary leading-relaxed font-sans">
-                  {act.sentence}
-                </p>
-                {act.worldName && (
-                  <div className="text-[10px] text-text-dim pt-0.5">
-                    in <span className="text-text-muted font-medium">{act.worldName}</span>
+                <div className="flex-1 space-y-0.5">
+                  <div className="flex flex-wrap items-center justify-between gap-1">
+                    <span className="text-xs font-semibold text-text-primary">
+                      {act.personName || 'Someone'}
+                    </span>
+                    <span className="text-[10px] text-text-muted">
+                      {formatDateRelative(act.timestamp)}
+                    </span>
                   </div>
-                )}
+                  <p className="text-xs text-text-secondary leading-relaxed font-sans">
+                    {act.sentence}
+                  </p>
+                  {act.worldName && (
+                    <div className="text-[10px] text-text-dim pt-0.5">
+                      in <span className="text-text-muted font-medium">{act.worldName}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

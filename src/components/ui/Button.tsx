@@ -26,21 +26,21 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-medium transition-all duration-150 select-none rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple focus-visible:ring-offset-2 focus-visible:ring-offset-background-deep disabled:opacity-45 disabled:pointer-events-none active:scale-[0.98] cursor-pointer tracking-normal font-sans';
+      'inline-flex items-center justify-center font-medium transition-all duration-200 select-none rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-purple-light focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0C14] disabled:opacity-45 disabled:pointer-events-none active:scale-[0.96] cursor-pointer tracking-normal font-sans';
 
     const variants = {
       primary:
-        'bg-brand-purple text-white hover:bg-brand-purple-dark shadow-sm hover:shadow-brand-glow font-semibold',
+        'bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-cosmos-glow hover:shadow-purple-glow font-semibold border border-purple-400/20',
       secondary:
-        'bg-background-elevated hover:bg-background-hover text-text-primary border border-border hover:border-brand-purple/40 shadow-sm',
+        'bg-white/[0.07] hover:bg-white/[0.12] text-text-primary border border-white/[0.1] hover:border-purple-500/40 shadow-sm backdrop-blur-md',
       outline:
-        'bg-transparent hover:bg-background-surface text-text-secondary hover:text-text-primary border border-border hover:border-brand-purple/50',
+        'bg-transparent hover:bg-white/[0.07] text-text-secondary hover:text-text-primary border border-white/[0.12] hover:border-purple-500/40',
       ghost:
-        'bg-transparent hover:bg-background-surface text-text-secondary hover:text-text-primary',
+        'bg-transparent hover:bg-white/[0.08] text-text-secondary hover:text-text-primary',
       danger:
-        'bg-brand-rose-subtle text-brand-rose hover:bg-brand-rose/20 border border-brand-rose/30',
+        'bg-rose-500/15 text-rose-300 hover:bg-rose-500/25 border border-rose-500/30',
       emerald:
-        'bg-brand-emerald text-white hover:bg-emerald-600 shadow-sm hover:shadow-emerald-glow font-semibold',
+        'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 shadow-emerald-glow font-semibold border border-emerald-400/20',
     };
 
     const sizes = {

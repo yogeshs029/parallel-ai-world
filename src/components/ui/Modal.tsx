@@ -25,7 +25,6 @@ export const Modal: React.FC<ModalProps> = ({
   showCloseButton = true,
   className,
 }) => {
-  // Handle escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -52,10 +51,10 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto font-sans">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto font-sans">
+      {/* High-elevation backdrop */}
       <div
-        className="fixed inset-0 bg-background-deep/80 backdrop-blur-sm transition-opacity animate-fade-in"
+        className="fixed inset-0 bg-black/85 backdrop-blur-md transition-opacity animate-fade-in z-[9999]"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -66,28 +65,30 @@ export const Modal: React.FC<ModalProps> = ({
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
         className={cn(
-          'relative w-full bg-background-surface border border-border rounded-2xl shadow-2xl z-10 overflow-hidden flex flex-col my-auto animate-slide-up',
+          'relative w-full bg-[#121426] border border-white/[0.14] rounded-3xl shadow-2xl z-[10000] overflow-hidden flex flex-col my-auto max-h-[90vh] text-text-primary animate-slide-up',
           sizes[size],
           className,
         )}
       >
-        {/* Optional Header */}
+        {/* Sticky Modal Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-start justify-between p-5 pb-3 border-b border-border">
-            <div>
+          <div className="flex items-start justify-between p-4 sm:p-6 pb-3 sm:pb-4 border-b border-white/[0.08] bg-[#121426] shrink-0 z-10">
+            <div className="min-w-0 pr-2">
               {title && (
-                <h3 id="modal-title" className="text-base font-bold text-text-primary tracking-tight font-sans">
+                <h3 id="modal-title" className="text-base sm:text-lg font-black text-white tracking-tight font-sans truncate">
                   {title}
                 </h3>
               )}
               {description && (
-                <p className="text-xs text-text-secondary mt-0.5 leading-relaxed font-sans">{description}</p>
+                <p className="text-xs text-text-secondary mt-0.5 sm:mt-1 leading-relaxed font-sans line-clamp-2">
+                  {description}
+                </p>
               )}
             </div>
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="text-text-muted hover:text-text-primary p-1 rounded-lg hover:bg-background-elevated transition-colors cursor-pointer"
+                className="text-text-muted hover:text-white p-1.5 sm:p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.06] transition-colors cursor-pointer shrink-0"
                 aria-label="Close modal"
               >
                 <X className="w-4 h-4" />
@@ -96,12 +97,14 @@ export const Modal: React.FC<ModalProps> = ({
           </div>
         )}
 
-        {/* Content */}
-        <div className="p-5 overflow-y-auto max-h-[75vh] space-y-4">{children}</div>
+        {/* Scrollable Modal Content Body */}
+        <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 custom-scrollbar min-h-0 space-y-4 text-xs sm:text-sm">
+          {children}
+        </div>
 
-        {/* Optional Footer */}
+        {/* Sticky Modal Footer */}
         {footer && (
-          <div className="p-4 border-t border-border bg-background-deep/40 flex items-center justify-end space-x-2.5">
+          <div className="p-3 sm:p-4 px-4 sm:px-6 border-t border-white/[0.08] bg-[#0E101E]/95 backdrop-blur-md flex items-center justify-end space-x-2.5 shrink-0 z-10">
             {footer}
           </div>
         )}
@@ -109,3 +112,5 @@ export const Modal: React.FC<ModalProps> = ({
     </div>
   );
 };
+
+export default Modal;

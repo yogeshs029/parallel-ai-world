@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Cpu, Flame, Globe, Key, Shield, Sparkles } from 'lucide-react';
+import { Cpu, Flame, Globe, Key, Shield, Sparkles, Trash2, Database } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../../../components/ui/Card';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
+import { devService } from '../../../services/devService';
+import { worldService } from '../../../services/worldService';
+import { World } from '../../../types';
+import { useToast } from '../../../hooks/useToast';
 
 export const GeneralSettings: React.FC = () => {
-  const [userName, setUserName] = useState('Alex');
-  const [email, setEmail] = useState('alex@example.com');
-  const [defaultWorld, setDefaultWorld] = useState('world-company');
+  const [userName, setUserName] = useState('');
+  const [email, setEmail] = useState('');
+  const [defaultWorld, setDefaultWorld] = useState('');
+  const [worlds, setWorlds] = useState<World[]>([]);
 
   // Cloudflare & Multi-Device AI Settings
   const [customApiUrl, setCustomApiUrl] = useState('');
@@ -17,11 +22,22 @@ export const GeneralSettings: React.FC = () => {
   const [groqKey, setGroqKey] = useState('');
   const [preferredModel, setPreferredModel] = useState('@cf/meta/llama-3.1-8b-instruct');
   const [globalExplicitMode, setGlobalExplicitMode] = useState(true);
-
   const [isSaved, setIsSaved] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
+    worldService.getAllWorlds().then((all) => {
+      setWorlds(all);
+      if (all.length > 0 && !defaultWorld) {
+        setDefaultWorld(all[0].id);
+      }
+    });
+
     try {
+      setUserName(localStorage.getItem('parallel_user_name') || 'User');
+      setEmail(localStorage.getItem('parallel_user_email') || 'user@example.com');
+      setDefaultWorld(localStorage.getItem('parallel_default_world') || '');
       setCustomApiUrl(localStorage.getItem('parallel_custom_api_url') || '');
       setCfApiToken(localStorage.getItem('parallel_cf_api_token') || '');
       setCfAccountId(localStorage.getItem('parallel_cf_account_id') || '');
@@ -36,6 +52,9 @@ export const GeneralSettings: React.FC = () => {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      localStorage.setItem('parallel_user_name', userName);
+      localStorage.setItem('parallel_user_email', email);
+      localStorage.setItem('parallel_default_world', defaultWorld);
       localStorage.setItem('parallel_custom_api_url', customApiUrl.trim());
       localStorage.setItem('parallel_cf_api_token', cfApiToken.trim());
       localStorage.setItem('parallel_cf_account_id', cfAccountId.trim());
@@ -46,7 +65,8 @@ export const GeneralSettings: React.FC = () => {
     } catch {}
 
     setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2500);
+    toast.success('Settings Saved', 'Application preferences and cloud AI credentials updated.');
+    setTimeout(() => setIsSaved(false), 3000);
   };
 
   return (
@@ -59,7 +79,7 @@ export const GeneralSettings: React.FC = () => {
               Profile & Preferences
             </CardTitle>
             <CardDescription>
-              Manage your personal profile and default world configuration.
+              Manage your personal identity, email preferences, and default workspace.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -84,11 +104,15 @@ export const GeneralSettings: React.FC = () => {
                 onChange={(e) => setDefaultWorld(e.target.value)}
                 className="w-full bg-background-elevated text-text-primary text-xs rounded-xl border border-border px-3.5 py-2.5 focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple font-sans"
               >
-                <option value="world-company">🏢 My Company</option>
-                <option value="world-home">🏠 My Home</option>
-                <option value="world-study">📚 My Study World</option>
-                <option value="world-story">🎮 Elysium Chronicles</option>
-                <option value="world-romance">💖 Romantic World</option>
+                {worlds.length === 0 ? (
+                  <option value="">No Worlds Created Yet</option>
+                ) : (
+                  worlds.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.emoji || '🌐'} {w.name}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
           </CardContent>
@@ -240,6 +264,55 @@ export const GeneralSettings: React.FC = () => {
             </Button>
           </CardFooter>
         </form>
+      </Card>
+
+      {/* Development & Database Reset Card */}
+      <Card className="border-red-500/30 bg-gradient-to-br from-[#1A121A] to-[#121424]">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base font-bold text-red-400">
+            <Database className="w-4 h-4 text-red-400" />
+            Development & Database Management
+          </CardTitle>
+          <CardDescription>
+            Purge development state and reset to pristine empty tables. Preserves database schema, table structures, and system tools.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-4 rounded-2xl bg-red-950/20 border border-red-500/20 space-y-2">
+            <div className="text-xs font-bold text-red-300 flex items-center gap-1.5">
+              <Trash2 className="w-4 h-4 text-red-400" />
+              Reset All Application State
+            </div>
+            <p className="text-xs text-text-secondary leading-relaxed">
+              Clears all created Worlds, People, Tasks, Knowledge documents, Memories, and active runtime instances.
+            </p>
+            <div className="pt-2 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (window.confirm('Are you sure you want to reset all data? This will restore a completely clean first-run experience.')) {
+                    setIsResetting(true);
+                    const res = await devService.resetDevDatabase();
+                    setIsResetting(false);
+                    if (res.success) {
+                      toast.success('Database Reset', res.message);
+                      setTimeout(() => {
+                        window.location.href = '/';
+                      }, 600);
+                    } else {
+                      toast.error('Reset Failed', res.message);
+                    }
+                  }
+                }}
+                disabled={isResetting}
+                className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 shadow-md"
+              >
+                <Trash2 className="w-4 h-4" />
+                {isResetting ? 'Resetting Data...' : 'Reset All Application Data'}
+              </button>
+            </div>
+          </div>
+        </CardContent>
       </Card>
     </div>
   );
